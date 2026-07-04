@@ -42,3 +42,5 @@ next-env.d.ts
 /.idea
 /scripts
 /lib/persistence/real/supabase/migrations
+package-lock.json
+*.json

@@ -1,13 +1,14 @@
 "use client";
 
 import {
+    type FocusEvent,
     type FormEvent,
     type PointerEvent,
     useMemo,
     useRef,
     useState,
 } from "react";
-import { Plus, X } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
@@ -18,6 +19,128 @@ interface LeadTableProps {
     leads: Lead[];
 }
 
+function normalizeVehicleFilterText(value: string): string {
+    return value.trim().toLowerCase();
+}
+
+function getVehicleMakeSearchTerms(value: string): string[] {
+    const normalizedValue = normalizeVehicleFilterText(value);
+
+    if (!normalizedValue) {
+        return [];
+    }
+
+    if (normalizedValue === "vw") {
+        return ["vw", "volkswagen"];
+    }
+
+    if (normalizedValue === "volkswagen") {
+        return ["volkswagen", "vw"];
+    }
+
+    return [normalizedValue];
+}
+
+function vehicleMakeMatches(make: string | null | undefined, value: string): boolean {
+    const normalizedMake = normalizeVehicleFilterText(make ?? "");
+    const searchTerms = getVehicleMakeSearchTerms(value);
+
+    if (searchTerms.length === 0) {
+        return true;
+    }
+
+    return searchTerms.some((term) => normalizedMake.includes(term));
+}
+
+function optionContainsSearchText(option: string, value: string): boolean {
+    const normalizedValue = normalizeVehicleFilterText(value);
+
+    if (!normalizedValue) {
+        return true;
+    }
+
+    return option.toLowerCase().includes(normalizedValue);
+}
+
+function SearchableVehicleFilter({
+    value,
+    options,
+    placeholder,
+    onChange,
+    matchesOption = optionContainsSearchText,
+}: {
+    value: string;
+    options: string[];
+    placeholder: string;
+    onChange: (value: string) => void;
+    matchesOption?: (option: string, value: string) => boolean;
+}) {
+    const [open, setOpen] = useState(false);
+    const filteredOptions = options.filter((option) =>
+        matchesOption(option, value)
+    );
+
+    function handleBlur(event: FocusEvent<HTMLDivElement>) {
+        if (event.currentTarget.contains(event.relatedTarget)) {
+            return;
+        }
+
+        setOpen(false);
+    }
+
+    return (
+        <div className="relative" onBlur={handleBlur}>
+            <div className="relative">
+                <input
+                    type="text"
+                    value={value}
+                    onFocus={() => setOpen(true)}
+                    onChange={(event) => {
+                        onChange(event.target.value);
+                        setOpen(true);
+                    }}
+                    placeholder={placeholder}
+                    className="w-full rounded-lg border px-4 py-3 pr-10 text-gray-900"
+                />
+                <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setOpen((currentOpen) => !currentOpen)}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500 hover:text-slate-800"
+                    aria-label={`Show ${placeholder.toLowerCase()} options`}
+                >
+                    <ChevronDown size={18} />
+                </button>
+            </div>
+
+            {open ? (
+                <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((option) => (
+                            <button
+                                key={option}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                    onChange(option);
+                                    setOpen(false);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                                {option}
+                            </button>
+                        ))
+                    ) : (
+                        <div className="px-3 py-2 text-sm text-slate-500">
+                            No matching options
+                        </div>
+                    )}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 export default function LeadTable({ leads }: LeadTableProps) {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadList, setLeadList] = useState<Lead[]>(leads);
@@ -26,6 +149,9 @@ export default function LeadTable({ leads }: LeadTableProps) {
     const [stageFilter, setStageFilter] = useState("ALL");
     const [tradeInFilter, setTradeInFilter] = useState("ALL");
     const [scoreFilter, setScoreFilter] = useState("ALL");
+    const [vehicleYearFilter, setVehicleYearFilter] = useState("");
+    const [vehicleMakeFilter, setVehicleMakeFilter] = useState("");
+    const [vehicleModelFilter, setVehicleModelFilter] = useState("");
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingLeadId, setDeletingLeadId] = useState<number | null>(null);
     const [updatingStatusLeadId, setUpdatingStatusLeadId] = useState<
@@ -169,7 +295,134 @@ export default function LeadTable({ leads }: LeadTableProps) {
         statusFilter !== "ALL" ||
         stageFilter !== "ALL" ||
         tradeInFilter !== "ALL" ||
-        scoreFilter !== "ALL";
+        scoreFilter !== "ALL" ||
+        vehicleYearFilter.trim() !== "" ||
+        vehicleMakeFilter.trim() !== "" ||
+        vehicleModelFilter.trim() !== "";
+
+    const vehicleYearOptions = useMemo(() => {
+        const years = leadList
+            .map((lead) => lead.vehicleInterest?.year)
+            .filter((year): year is number => typeof year === "number");
+
+        return [...new Set(years)]
+            .sort((yearA, yearB) => yearB - yearA)
+            .map((year) => year.toString());
+    }, [leadList]);
+
+    function getVehicleMakeOptions(yearFilter: string): string[] {
+        const requestedYear = yearFilter.trim();
+        const makes = leadList
+            .filter((lead) => {
+                if (!requestedYear) {
+                    return true;
+                }
+
+                return lead.vehicleInterest?.year
+                    ?.toString()
+                    .includes(requestedYear);
+            })
+            .map((lead) => lead.vehicleInterest?.make?.trim())
+            .filter((make): make is string => Boolean(make));
+
+        return [...new Set(makes)].sort((makeA, makeB) =>
+            makeA.localeCompare(makeB)
+        );
+    }
+
+    const vehicleMakeOptions = getVehicleMakeOptions(vehicleYearFilter);
+
+    function getVehicleModelOptions(
+        yearFilter: string,
+        makeFilter: string
+    ): string[] {
+        const requestedYear = yearFilter.trim();
+        const models = leadList
+            .filter((lead) => {
+                if (!requestedYear) {
+                    return true;
+                }
+
+                return lead.vehicleInterest?.year
+                    ?.toString()
+                    .includes(requestedYear);
+            })
+            .filter((lead) =>
+                vehicleMakeMatches(lead.vehicleInterest?.make, makeFilter)
+            )
+            .map((lead) => lead.vehicleInterest?.model?.trim())
+            .filter((model): model is string => Boolean(model));
+
+        return [...new Set(models)].sort((modelA, modelB) =>
+            modelA.localeCompare(modelB)
+        );
+    }
+
+    const vehicleModelOptions = getVehicleModelOptions(
+        vehicleYearFilter,
+        vehicleMakeFilter
+    );
+
+    function hasMatchingOption(
+        value: string,
+        options: string[],
+        matchesOption: (option: string, value: string) => boolean
+    ): boolean {
+        if (!value.trim()) {
+            return true;
+        }
+
+        return options.some((option) => matchesOption(option, value));
+    }
+
+    function handleVehicleYearFilterChange(value: string) {
+        setVehicleYearFilter(value);
+
+        const nextMakeOptions = getVehicleMakeOptions(value);
+
+        if (
+            !hasMatchingOption(
+                vehicleMakeFilter,
+                nextMakeOptions,
+                vehicleMakeMatches
+            )
+        ) {
+            setVehicleMakeFilter("");
+            setVehicleModelFilter("");
+            return;
+        }
+
+        const nextModelOptions = getVehicleModelOptions(
+            value,
+            vehicleMakeFilter
+        );
+
+        if (
+            !hasMatchingOption(
+                vehicleModelFilter,
+                nextModelOptions,
+                optionContainsSearchText
+            )
+        ) {
+            setVehicleModelFilter("");
+        }
+    }
+
+    function handleVehicleMakeFilterChange(value: string) {
+        setVehicleMakeFilter(value);
+
+        const nextModelOptions = getVehicleModelOptions(vehicleYearFilter, value);
+
+        if (
+            !hasMatchingOption(
+                vehicleModelFilter,
+                nextModelOptions,
+                optionContainsSearchText
+            )
+        ) {
+            setVehicleModelFilter("");
+        }
+    }
 
     const filteredLeads = useMemo(() => {
         if (!hasActiveFilters) {
@@ -209,12 +462,36 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     lead.score <= 79) ||
                 (scoreFilter === "ABOVE_80" && lead.score >= 80);
 
+            const vehicleInterest = lead.vehicleInterest;
+            const requestedVehicleYear = vehicleYearFilter.trim();
+            const requestedVehicleModel = vehicleModelFilter
+                .trim()
+                .toLowerCase();
+
+            const matchesVehicleYear =
+                requestedVehicleYear === "" ||
+                vehicleInterest?.year
+                    ?.toString()
+                    .includes(requestedVehicleYear);
+
+            const matchesVehicleMake =
+                vehicleMakeMatches(vehicleInterest?.make, vehicleMakeFilter);
+
+            const matchesVehicleModel =
+                requestedVehicleModel === "" ||
+                vehicleInterest?.model
+                    ?.toLowerCase()
+                    .includes(requestedVehicleModel);
+
             return (
                 matchesSearch &&
                 matchesStatus &&
                 matchesStage &&
                 matchesTradeIn &&
-                matchesScore
+                matchesScore &&
+                matchesVehicleYear &&
+                matchesVehicleMake &&
+                matchesVehicleModel
             );
         });
     }, [
@@ -225,6 +502,9 @@ export default function LeadTable({ leads }: LeadTableProps) {
         stageFilter,
         statusFilter,
         tradeInFilter,
+        vehicleMakeFilter,
+        vehicleModelFilter,
+        vehicleYearFilter,
     ]);
 
     function clearFilters() {
@@ -233,6 +513,9 @@ export default function LeadTable({ leads }: LeadTableProps) {
         setStageFilter("ALL");
         setTradeInFilter("ALL");
         setScoreFilter("ALL");
+        setVehicleYearFilter("");
+        setVehicleMakeFilter("");
+        setVehicleModelFilter("");
     }
 
     function clampFabPosition(x: number, y: number, width: number, height: number) {
@@ -303,63 +586,136 @@ export default function LeadTable({ leads }: LeadTableProps) {
     return (
         <div>
             <div className="mb-8 rounded-lg border bg-white p-6 shadow-sm">
-                <div className="flex flex-wrap items-center gap-6">
-                    <input
-                        type="text"
-                        placeholder="Search by name, email, or phone."
-                        value={searchText}
-                        onChange={(event) => setSearchText(event.target.value)}
-                        className="w-full max-w-md rounded-lg border px-4 py-3 text-gray-900"
-                    />
-
-                    <select
-                        value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value)}
-                        className="rounded-lg border px-4 py-3 text-gray-900"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="LOST">Lost</option>
-                    </select>
-
-                    <select
-                        value={stageFilter}
-                        onChange={(event) => setStageFilter(event.target.value)}
-                        className="rounded-lg border px-4 py-3 text-gray-900"
-                    >
-                        <option value="ALL">All Stages</option>
-                        <option value="NEW">New</option>
-                        <option value="CONTACTED">Contacted</option>
-                        <option value="VISITED">Visited</option>
-                        <option value="TEST_DRIVE">Test Drive</option>
-                        <option value="NEGOTIATION">Negotiation</option>
-                        <option value="DELIVERED">Delivered</option>
-                    </select>
-
-                    <select
-                        value={tradeInFilter}
-                        onChange={(event) => setTradeInFilter(event.target.value)}
-                        className="rounded-lg border px-4 py-3 text-gray-900"
-                    >
-                        <option value="ALL">All Trade-in</option>
-                        <option value="YES">Yes</option>
-                        <option value="NO">No</option>
-                    </select>
-
-                    <select
-                        value={scoreFilter}
-                        onChange={(event) => setScoreFilter(event.target.value)}
-                        className="rounded-lg border px-4 py-3 text-gray-900"
-                    >
-                        <option value="ALL">All Scores</option>
-                        <option value="BELOW_50">Below 50</option>
-                        <option value="BETWEEN_50_79">50 - 79</option>
-                        <option value="ABOVE_80">80+</option>
-                    </select>
-
+                <div className="border-b border-slate-100 pb-4">
+                    <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                        Lead Filters
+                    </h2>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <div className="mt-5 space-y-6">
+                    <section>
+                        <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Search
+                        </h3>
+                        <input
+                            type="text"
+                            placeholder="Search by customer name, email, or phone"
+                            value={searchText}
+                            onChange={(event) =>
+                                setSearchText(event.target.value)
+                            }
+                            className="w-full rounded-lg border px-4 py-3 text-gray-900 lg:max-w-4xl"
+                        />
+                    </section>
+
+                    <section>
+                        <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Basic Filters
+                        </h3>
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                            <select
+                                value={statusFilter}
+                                onChange={(event) =>
+                                    setStatusFilter(event.target.value)
+                                }
+                                className="rounded-lg border px-4 py-3 text-gray-900"
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="LOST">Lost</option>
+                            </select>
+
+                            <select
+                                value={stageFilter}
+                                onChange={(event) =>
+                                    setStageFilter(event.target.value)
+                                }
+                                className="rounded-lg border px-4 py-3 text-gray-900"
+                            >
+                                <option value="ALL">All Stages</option>
+                                <option value="NEW">New</option>
+                                <option value="CONTACTED">Contacted</option>
+                                <option value="VISITED">Visited</option>
+                                <option value="TEST_DRIVE">Test Drive</option>
+                                <option value="NEGOTIATION">Negotiation</option>
+                                <option value="DELIVERED">Delivered</option>
+                            </select>
+
+                            <select
+                                value={tradeInFilter}
+                                onChange={(event) =>
+                                    setTradeInFilter(event.target.value)
+                                }
+                                className="rounded-lg border px-4 py-3 text-gray-900"
+                            >
+                                <option value="ALL">All Trade-in</option>
+                                <option value="YES">Yes</option>
+                                <option value="NO">No</option>
+                            </select>
+
+                            <select
+                                value={scoreFilter}
+                                onChange={(event) =>
+                                    setScoreFilter(event.target.value)
+                                }
+                                className="rounded-lg border px-4 py-3 text-gray-900"
+                            >
+                                <option value="ALL">All Scores</option>
+                                <option value="BELOW_50">Below 50</option>
+                                <option value="BETWEEN_50_79">50 - 79</option>
+                                <option value="ABOVE_80">80+</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <section>
+                        <div className="mb-2 flex items-center gap-2">
+
+                            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Vehicle Interest
+                            </h3>
+                        </div>
+
+                        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                            <SearchableVehicleFilter
+                                value={vehicleYearFilter}
+                                options={vehicleYearOptions}
+                                placeholder="Any year"
+                                onChange={handleVehicleYearFilterChange}
+                            />
+
+                            <SearchableVehicleFilter
+                                value={vehicleMakeFilter}
+                                options={vehicleMakeOptions}
+                                placeholder="Any make"
+                                onChange={handleVehicleMakeFilterChange}
+                                matchesOption={vehicleMakeMatches}
+                            />
+
+                            <SearchableVehicleFilter
+                                value={vehicleModelFilter}
+                                options={vehicleModelOptions}
+                                placeholder="Any model"
+                                onChange={setVehicleModelFilter}
+                            />
+
+                            <div className="flex items-end">
+                                {hasActiveFilters ? (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                ) : (
+                                    <div className="hidden lg:block" />
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div className="mt-6 text-sm">
                     <p className="text-slate-600">
                         Showing{" "}
                         <span className="font-semibold text-slate-950">
@@ -371,15 +727,6 @@ export default function LeadTable({ leads }: LeadTableProps) {
                         </span>{" "}
                         leads
                     </p>
-
-                    {hasActiveFilters ? (
-                        <button
-                            onClick={clearFilters}
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                            Clear Filters
-                        </button>
-                    ) : null}
                 </div>
             </div>
 
