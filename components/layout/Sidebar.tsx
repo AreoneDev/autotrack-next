@@ -110,7 +110,7 @@ export default function Sidebar() {
                     {!collapsed && (
                         <div>
                             <p className="font-semibold text-gray-900">
-                                Pengyu Wang
+                                AutoTrack account
                             </p>
                             <p className="text-sm text-gray-500">
                                 Sales Professional

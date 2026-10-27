@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AccountMenu from "@/components/auth/AccountMenu";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -350,21 +351,7 @@ export default function TopBar() {
                     {time}
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
-                        PW
-                    </div>
-
-                    <div>
-                        <p className="font-medium text-gray-900">
-                            Pengyu Wang
-                        </p>
-
-                        <p className="text-xs text-gray-500">
-                            Sales Consultant
-                        </p>
-                    </div>
-                </div>
+                <AccountMenu />
 
             </div>
 

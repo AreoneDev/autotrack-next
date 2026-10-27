@@ -51,7 +51,7 @@ export default function LoginPage() {
                 const { error: otpError } = await supabase.auth.signInWithOtp({
                     email,
                     options: {
-                        emailRedirectTo: `${window.location.origin}/login`,
+                        emailRedirectTo: `${window.location.origin}/auth/callback`,
                     },
                 });
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
                     email,
                     password,
                     options: {
-                        emailRedirectTo: `${window.location.origin}/login`,
+                        emailRedirectTo: `${window.location.origin}/auth/callback`,
                     },
                 });
 
@@ -94,6 +94,8 @@ export default function LoginPage() {
             } else {
                 router.replace("/dashboard");
             }
+        } catch (failure) {
+            setError(failure instanceof Error ? failure.message : "Unable to reach the sign-in service. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -126,7 +128,7 @@ export default function LoginPage() {
                     {requiresPassword ? (
                         <label className="block text-sm font-medium text-slate-700">
                             Password
-                            <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+                            <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={mode === "register" ? 8 : undefined} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
                         </label>
                     ) : null}
 

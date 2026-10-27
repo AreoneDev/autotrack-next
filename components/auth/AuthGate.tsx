@@ -15,31 +15,44 @@ export default function AuthGate({ children }: AuthGateProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [isCheckingSession, setIsCheckingSession] = useState(true);
+    const [sessionError, setSessionError] = useState("");
 
     useEffect(() => {
         let isMounted = true;
 
         async function verifySession() {
-            const { data } = await supabase.auth.getSession();
+            try {
+            const { data, error } = await supabase.auth.getSession();
 
             if (!isMounted) {
                 return;
             }
 
-            if (!data.session) {
+            if (error || !data.session) {
+                setIsCheckingSession(true);
                 router.replace("/login");
                 return;
             }
 
             setIsCheckingSession(false);
+            } catch {
+                if (isMounted) setSessionError("Unable to check your session. Please reload to try again.");
+            }
         }
 
         if (pathname !== "/login") {
             void verifySession();
         }
 
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!isMounted) return;
+            setIsCheckingSession(!session);
+            if (!session && pathname !== "/login") router.replace("/login");
+        });
+
         return () => {
             isMounted = false;
+            listener.subscription.unsubscribe();
         };
     }, [pathname, router]);
 
@@ -50,7 +63,7 @@ export default function AuthGate({ children }: AuthGateProps) {
     if (isCheckingSession) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-                <p className="text-sm text-slate-600">Checking your session…</p>
+                <p role={sessionError ? "alert" : "status"} className="text-sm text-slate-600">{sessionError || "Checking your session…"}</p>
             </main>
         );
     }
