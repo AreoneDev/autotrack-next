@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Vehicle } from "@/domain/objects/Vehicle";
 
 type VehicleRow = {
@@ -58,8 +59,10 @@ function mapVehicleToRow(vehicle: Vehicle): VehicleInsertRow {
 }
 
 export class VehicleRepo {
+    constructor(private readonly client: SupabaseClient = supabase) {}
+
     async searchYears(query = "", limit = 20): Promise<number[]> {
-        const request = supabase
+        const request = this.client
             .from(TABLE_NAME)
             .select("year")
             .not("year", "is", null)
@@ -93,7 +96,7 @@ export class VehicleRepo {
         query = "",
         limit = 20
     ): Promise<string[]> {
-        let request = supabase
+        let request = this.client
             .from(TABLE_NAME)
             .select("make")
             .eq("year", year)
@@ -126,7 +129,7 @@ export class VehicleRepo {
         query = "",
         limit = 20
     ): Promise<string[]> {
-        let request = supabase
+        let request = this.client
             .from(TABLE_NAME)
             .select("model")
             .eq("year", year)
@@ -161,7 +164,7 @@ export class VehicleRepo {
         query = "",
         limit = 20
     ): Promise<string[]> {
-        let request = supabase
+        let request = this.client
             .from(TABLE_NAME)
             .select("trim")
             .eq("year", year)
@@ -201,7 +204,7 @@ export class VehicleRepo {
         model: string;
         trim?: string;
     }): Promise<Vehicle | null> {
-        let request = supabase
+        let request = this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("year", year)
@@ -224,7 +227,7 @@ export class VehicleRepo {
     }
 
     async getAllVehicles(): Promise<Vehicle[]> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .order("vehicle_id", { ascending: true });
@@ -237,7 +240,7 @@ export class VehicleRepo {
     }
 
     async getVehicleById(id: number): Promise<Vehicle | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("vehicle_id", id)
@@ -251,7 +254,7 @@ export class VehicleRepo {
     }
 
     async insertVehicle(vehicle: Vehicle): Promise<string | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .insert(mapVehicleToRow(vehicle))
             .select("*")
@@ -275,7 +278,7 @@ export class VehicleRepo {
             return "Vehicle not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .update(mapVehicleToRow(vehicle))
             .eq("vehicle_id", vehicle.vehicleID);
@@ -290,7 +293,7 @@ export class VehicleRepo {
             return "Vehicle not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .delete()
             .eq("vehicle_id", id);

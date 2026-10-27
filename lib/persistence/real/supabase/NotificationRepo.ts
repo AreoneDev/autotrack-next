@@ -1,6 +1,7 @@
 import { Lead } from "@/domain/objects/Lead";
 import { Notification } from "@/domain/objects/Notification";
 import { supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type NotificationRow = {
     notification_id: number;
@@ -52,8 +53,10 @@ function mapNotificationToRow(
 }
 
 export class NotificationRepo {
+    constructor(private readonly client: SupabaseClient = supabase) {}
+
     async getAllNotifications(): Promise<Notification[]> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .order("date", { ascending: false });
@@ -66,7 +69,7 @@ export class NotificationRepo {
     }
 
     async getNotificationById(id: number): Promise<Notification | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("notification_id", id)
@@ -80,7 +83,7 @@ export class NotificationRepo {
     }
 
     async getNotificationsByLeadId(leadId: number): Promise<Notification[]> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("lead_id", leadId)
@@ -96,7 +99,7 @@ export class NotificationRepo {
     async insertNotification(
         notification: Notification
     ): Promise<string | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .insert(mapNotificationToRow(notification))
             .select("*")
@@ -124,7 +127,7 @@ export class NotificationRepo {
             return "Notification not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .update(mapNotificationToRow(notification))
             .eq("notification_id", notification.getEventID());
@@ -139,7 +142,7 @@ export class NotificationRepo {
             return "Notification not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .delete()
             .eq("notification_id", id);

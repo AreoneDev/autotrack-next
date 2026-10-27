@@ -18,6 +18,7 @@ import {
 } from "@/domain/business/AnalyticsService";
 import { ScoringService } from "@/domain/business/ScoringService";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
+import { requireServerClient } from "@/lib/supabase/server";
 import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
 
@@ -306,10 +307,13 @@ function mapHotLeadsTrend(data: HotLeadsTrendPoint[]) {
     }));
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage() {
-    const leadRepository = new LeadRepo();
-    const taskRepository = new TaskRepo();
-    const notificationRepository = new NotificationRepo();
+    const client = await requireServerClient();
+    const leadRepository = new LeadRepo(client);
+    const taskRepository = new TaskRepo(client);
+    const notificationRepository = new NotificationRepo(client);
     const analyticsService = new AnalyticsService(new ScoringService());
 
     const [leads, tasks, notifications] = await Promise.all([

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireServerClient } from "@/lib/supabase/server";
 import {
     AlertTriangle,
     Bell,
@@ -31,13 +33,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-async function hydrateLeadVehicleData(leads: Lead[]): Promise<Lead[]> {
-    const vehicleRepository = new VehicleRepo();
+async function hydrateLeadVehicleData(leads: Lead[], client: SupabaseClient): Promise<Lead[]> {
+    const vehicleRepository = new VehicleRepo(client);
     const vehicleInterestRepository = new LeadVehicleInterestRepo(
-        vehicleRepository
+        vehicleRepository, client
     );
     const tradeInVehicleRepository = new LeadTradeInVehicleRepo(
-        vehicleRepository
+        vehicleRepository, client
     );
 
     return Promise.all(
@@ -93,10 +95,11 @@ function getRecentActivityIcon(type: DashboardRecentActivityType) {
 }
 
 export default async function DashboardPage() {
+    const client = await requireServerClient();
     const targetDate = new Date();
-    const leadRepo = new LeadRepo();
-    const taskRepo = new TaskRepo();
-    const notificationRepo = new NotificationRepo();
+    const leadRepo = new LeadRepo(client);
+    const taskRepo = new TaskRepo(client);
+    const notificationRepo = new NotificationRepo(client);
     const scoringService = new ScoringService();
     const priorityManager = new PriorityManager(scoringService);
     const agendaService = new AgendaService(scoringService, priorityManager);
@@ -110,21 +113,9 @@ export default async function DashboardPage() {
         taskRepo.getAllTasks(),
         notificationRepo.getAllNotifications(),
     ]);
-    const hydratedLeads = await hydrateLeadVehicleData(leads);
+    const hydratedLeads = await hydrateLeadVehicleData(leads, client);
 
-    const systemTasks = agendaService.getMissingSystemAssignedTasksUpToDate(
-        hydratedLeads,
-        tasks,
-        targetDate
-    );
-
-    for (const task of systemTasks) {
-        await taskRepo.insertTask(task);
-    }
-
-    const persistedTasks =
-        systemTasks.length > 0 ? await taskRepo.getAllTasks() : tasks;
-    const allTasks = agendaService.getUniqueTasks(persistedTasks);
+    const allTasks = agendaService.getUniqueTasks(tasks);
 
     const dashboardData = dashboardService.getDashboardData(
         hydratedLeads,

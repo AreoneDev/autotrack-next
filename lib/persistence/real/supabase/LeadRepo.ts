@@ -1,5 +1,6 @@
 import { Lead } from "@/domain/objects/Lead";
 import { supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type LeadRow = {
     lead_id: number;
@@ -98,8 +99,10 @@ function mapLeadToRow(lead: Lead): LeadInsertRow {
 }
 
 export class LeadRepo {
+    constructor(private readonly client: SupabaseClient = supabase) {}
+
     async getAllLeads(): Promise<Lead[]> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .order("lead_id", { ascending: true });
@@ -112,7 +115,7 @@ export class LeadRepo {
     }
 
     async getLeadById(id: number): Promise<Lead | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("lead_id", id)
@@ -135,7 +138,7 @@ export class LeadRepo {
         const sanitizedTerm = searchTerm.replaceAll(",", " ");
         const pattern = `%${sanitizedTerm}%`;
 
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .or(
@@ -163,7 +166,7 @@ export class LeadRepo {
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .not("follow_up_date", "is", null)
@@ -179,7 +182,7 @@ export class LeadRepo {
     }
 
     async insertLead(lead: Lead): Promise<string | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .insert(mapLeadToRow(lead))
             .select("*")
@@ -203,7 +206,7 @@ export class LeadRepo {
             return "Lead not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .update(mapLeadToRow(lead))
             .eq("lead_id", lead.leadID);
@@ -218,7 +221,7 @@ export class LeadRepo {
             return "Lead not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .delete()
             .eq("lead_id", id);

@@ -1,6 +1,7 @@
 import { Lead } from "@/domain/objects/Lead";
 import { Task } from "@/domain/objects/Task";
 import { supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type TaskRow = {
     task_id: number;
@@ -199,12 +200,14 @@ function getCanonicalTasks(tasks: Task[]): Task[] {
 }
 
 export class TaskRepo {
+    constructor(private readonly client: SupabaseClient = supabase) {}
+
     async getAllTasks(): Promise<Task[]> {
         const rows: TaskRow[] = [];
         let start = 0;
 
         while (true) {
-            const { data, error } = await supabase
+            const { data, error } = await this.client
                 .from(TABLE_NAME)
                 .select("*")
                 .order("task_date", { ascending: true })
@@ -227,7 +230,7 @@ export class TaskRepo {
     }
 
     async getTaskById(id: number): Promise<Task | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("task_id", id)
@@ -245,7 +248,7 @@ export class TaskRepo {
         let start = 0;
 
         while (true) {
-            const { data, error } = await supabase
+            const { data, error } = await this.client
                 .from(TABLE_NAME)
                 .select("*")
                 .eq("lead_id", leadId)
@@ -291,14 +294,14 @@ export class TaskRepo {
             return null;
         }
 
-        let { data, error } = await supabase
+        let { data, error } = await this.client
             .from(TABLE_NAME)
             .insert(mapTaskToRow(task))
             .select("*")
             .single();
 
         if (error && isTaskDetailsColumnError(error.message)) {
-            const retryResult = await supabase
+            const retryResult = await this.client
                 .from(TABLE_NAME)
                 .insert(mapTaskToRow(task, false))
                 .select("*")
@@ -332,13 +335,13 @@ export class TaskRepo {
             return "Task not found.";
         }
 
-        let { error } = await supabase
+        let { error } = await this.client
             .from(TABLE_NAME)
             .update(mapTaskToRow(task))
             .eq("task_id", task.getEventID());
 
         if (error && isTaskDetailsColumnError(error.message)) {
-            const retryResult = await supabase
+            const retryResult = await this.client
                 .from(TABLE_NAME)
                 .update(mapTaskToRow(task, false))
                 .eq("task_id", task.getEventID());
@@ -365,7 +368,7 @@ export class TaskRepo {
             return "Task not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .update({ completed })
             .eq("task_id", id);
@@ -385,7 +388,7 @@ export class TaskRepo {
             return "Task not found.";
         }
 
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .delete()
             .eq("task_id", id);
@@ -401,7 +404,7 @@ export class TaskRepo {
         }
 
         const dateRange = getTaskDateRange(task.getDate());
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .update({ completed: task.isCompleted() })
             .eq("lead_id", leadId)

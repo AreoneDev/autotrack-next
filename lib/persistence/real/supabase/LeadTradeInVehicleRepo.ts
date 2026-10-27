@@ -1,5 +1,6 @@
 import { Vehicle } from "@/domain/objects/Vehicle";
 import { supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { VehicleRepo } from "@/lib/persistence/real/supabase/VehicleRepo";
 
 type LeadTradeInVehicleRow = {
@@ -25,12 +26,12 @@ function isMissingTableError(message: string): boolean {
 export class LeadTradeInVehicleRepo {
     private vehicleRepo: VehicleRepo;
 
-    constructor(vehicleRepo = new VehicleRepo()) {
+    constructor(vehicleRepo = new VehicleRepo(), private readonly client: SupabaseClient = supabase) {
         this.vehicleRepo = vehicleRepo;
     }
 
     async getTradeInVehicleByLeadId(leadId: number): Promise<Vehicle | null> {
-        const { data, error } = await supabase
+        const { data, error } = await this.client
             .from(TABLE_NAME)
             .select("*")
             .eq("lead_id", leadId)
@@ -90,7 +91,7 @@ export class LeadTradeInVehicleRepo {
             trim?.trim() && trim.trim() !== vehicle.trim
                 ? trim.trim()
                 : null;
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .upsert(
                 {
@@ -110,7 +111,7 @@ export class LeadTradeInVehicleRepo {
     }
 
     async clearTradeInVehicle(leadId: number): Promise<string | null> {
-        const { error } = await supabase
+        const { error } = await this.client
             .from(TABLE_NAME)
             .delete()
             .eq("lead_id", leadId);

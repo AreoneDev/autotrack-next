@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireServerClient } from "@/lib/supabase/server";
 
 import LeadDetailPanel, {
     LeadDetailNotificationViewModel,
@@ -126,16 +127,17 @@ export default async function LeadDetailPage({
 }: LeadDetailPageProps) {
     const { id } = await params;
 
-    const leadRepository = new LeadRepo();
-    const vehicleRepository = new VehicleRepo();
+    const client = await requireServerClient();
+    const leadRepository = new LeadRepo(client);
+    const vehicleRepository = new VehicleRepo(client);
     const leadVehicleInterestRepository = new LeadVehicleInterestRepo(
-        vehicleRepository
+        vehicleRepository, client
     );
     const leadTradeInVehicleRepository = new LeadTradeInVehicleRepo(
-        vehicleRepository
+        vehicleRepository, client
     );
-    const taskRepository = new TaskRepo();
-    const notificationRepository = new NotificationRepo();
+    const taskRepository = new TaskRepo(client);
+    const notificationRepository = new NotificationRepo(client);
     const scoringService = new ScoringService();
     const priorityManager = new PriorityManager(scoringService);
     const agendaService = new AgendaService(scoringService, priorityManager);
@@ -168,21 +170,7 @@ export default async function LeadDetailPage({
             notificationRepository.getNotificationsByLeadId(lead.leadID),
         ]);
 
-    const missingSystemTasks =
-        agendaService.getMissingSystemAssignedTasksUpToDate(
-            [lead],
-            leadTasks,
-            new Date()
-        );
-
-    for (const task of missingSystemTasks) {
-        await taskRepository.insertTask(task);
-    }
-
-    const persistedLeadTasks =
-        missingSystemTasks.length > 0
-            ? await taskRepository.getTasksByLeadId(lead.leadID)
-            : leadTasks;
+    const persistedLeadTasks = leadTasks;
 
     lead.vehicleInterest = vehicleInterest;
     lead.tradeInVehicle = tradeInVehicle;
