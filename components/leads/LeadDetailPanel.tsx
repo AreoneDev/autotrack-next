@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { localDateInput } from "@/lib/date";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -129,7 +130,7 @@ function toDate(value: string) {
 }
 
 function toTaskDateTime(date: string, time: string) {
-    const dateValue = date || new Date().toISOString().split("T")[0];
+    const dateValue = date || localDateInput();
     const timeValue = time || "09:00";
 
     return new Date(`${dateValue}T${timeValue}:00`);
@@ -344,7 +345,7 @@ export default function LeadDetailPanel({
     const [newTaskType, setNewTaskType] = useState("");
     const [newTaskNotes, setNewTaskNotes] = useState("");
     const [newTaskDate, setNewTaskDate] = useState(
-        new Date().toISOString().split("T")[0]
+        localDateInput()
     );
     const [newTaskTime, setNewTaskTime] = useState("09:00");
     const [draftTaskTitle, setDraftTaskTitle] = useState("");
@@ -580,7 +581,7 @@ export default function LeadDetailPanel({
             await reloadLeadTasks(taskRepository);
             setNewTaskType("");
             setNewTaskNotes("");
-            setNewTaskDate(new Date().toISOString().split("T")[0]);
+            setNewTaskDate(localDateInput());
             setNewTaskTime("09:00");
             router.refresh();
         } catch (error) {

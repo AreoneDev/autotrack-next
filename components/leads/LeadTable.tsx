@@ -11,6 +11,7 @@ import {
 import { ChevronDown, Plus, X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
+import { localDateInput } from "@/lib/date";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import LeadTableRow from "./LeadTableRow";
 import LeadBriefModal from "./LeadBriefModal";
@@ -174,7 +175,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
         leadEmail: "",
         stage: "NEW",
         budget: "",
-        followUpDate: new Date().toISOString().split("T")[0],
+        followUpDate: localDateInput(),
         notes: "",
     });
 
@@ -228,7 +229,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
             leadEmail: "",
             stage: "NEW",
             budget: "",
-            followUpDate: new Date().toISOString().split("T")[0],
+            followUpDate: localDateInput(),
             notes: "",
         });
         setCreateOpen(false);
