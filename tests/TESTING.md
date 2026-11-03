@@ -1,0 +1,33 @@
+# Test strategy and traceability
+
+The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https://istqb.org/wp-content/uploads/2024/11/ISTQB_CTFL_Syllabus_v4.0.1.pdf): equivalence partitioning, boundary value analysis, decision tables, state transitions, and risk-based prioritization. It does not claim formal certification or exhaustive coverage. Case IDs in test names link to the risk areas below; existing tests predate these IDs.
+
+| Risk / expected behavior | Design | Cases / level |
+| --- | --- | --- |
+| Scoring, follow-up cadence, closed leads and DST | Boundary values, terminal states | SC; `tests/unit/business/ScoringBoundaries.test.ts` |
+| Analytics denominators, budget, scores, communication and trends | Partitions, boundaries, decision table | AN; `tests/unit/business/AnalyticsService.test.ts` |
+| Activity classification, order and relative time | Partitions, time boundaries | RA; `tests/unit/business/RecentActivityService.test.ts` |
+| Vehicle required fields, clear, save and catalog lookup | Decision table, partitions | VS; `tests/unit/business/VehicleSelectionService.test.ts` |
+| Repository mapping, paging, errors, deduplication and relationships | Boundaries, failure injection, service/repository integration | DB; `tests/integration/persistence/real/` (scripted HTTP client doubles) |
+| Authentication callback, session protection, login and logout | Decision table and transitions | AUTH-CB, UI-AUTH, UI-GATE, UI-ACCOUNT, E2E-AUTH |
+| Lead search, filtering, creation, status rollback and deletion | Partitions, boundaries, transitions | UI-LEAD, E2E-LEAD |
+| Task completion and vehicle form | Transitions, negative cases | UI-TASK, UI-VEH |
+| Calendar month lengths, leap years, six-week months | Boundaries | UI-CAL |
+
+Fixtures contain synthetic data. Unit, integration and React tests are deterministic and never require Supabase credentials. `tests/integration/persistence/real/` exercises real adapter code with a scripted client double: it does not execute SQL or prove row-level security. Playwright builds the application against a loopback-only, resettable HTTP double on ports 3100 and 54329. Do not reuse those ports for a real service during the run. The double implements only the paths needed by these tests; it is not a Supabase emulator. Browser tests run serially so their resets do not race. The suite covers Chromium, Firefox, WebKit and a mobile Chromium viewport.
+
+```sh
+npm ci
+npm run test:unit
+npm run test:integration
+npm run test:ui
+npm run test:coverage
+npx playwright install chromium firefox webkit
+npm run test:e2e
+npm run typecheck
+npm run lint
+```
+
+Coverage reports are in `coverage/`; the denominator deliberately includes untested components and production repositories so gaps remain visible. Playwright HTML reports and failed traces/screenshots are in `playwright-report/` and `test-results/`. Coverage measures execution, not the adequacy of assertions. Case IDs label test intent, not requirements approved by a product owner.
+
+Remaining high-priority work: run migrations and `supabase/verification/20261031_per_user_data_access.sql` against a disposable database with two independent users, and test real RLS and email callbacks; add lead-detail editing, dashboard and agenda journeys; add keyboard/screen-reader accessibility, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.

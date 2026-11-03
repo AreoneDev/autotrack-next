@@ -1,0 +1,33 @@
+import { test, expect } from "@playwright/test";
+
+test("E2E-LEAD-01: create → search → change status → reload → delete", async ({ page, request }) => {
+    expect((await request.post("http://127.0.0.1:54329/__test__/reset")).ok()).toBe(true);
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
+    await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page).toHaveURL("/dashboard");
+    await page.goto("/leads");
+    await page.getByRole("button", { name: "Create new lead" }).click();
+    await page.getByLabel("First Name", { exact: true }).fill("Browser");
+    await page.getByLabel("Last Name", { exact: true }).fill("Customer");
+    await page.getByLabel("Email", { exact: true }).fill("browser@example.test");
+    await page.getByRole("button", { name: "Create Lead", exact: true }).click();
+    const customer = page.getByRole("link", { name: "Browser Customer", exact: true });
+    await expect(customer).toBeVisible();
+    const search = page.getByPlaceholder("Search by customer name, email, or phone");
+    await search.fill("missing customer");
+    await expect(page.getByText("No leads match the selected filters.")).toBeVisible();
+    await search.fill("BROWSER@EXAMPLE.TEST");
+    await expect(customer).toBeVisible();
+    const row = page.getByRole("row").filter({ has: customer });
+    await row.getByRole("combobox").selectOption("LOST");
+    await expect(row.getByRole("combobox")).toBeEnabled();
+    await page.reload();
+    await expect(row.getByRole("combobox")).toHaveValue("LOST");
+    await row.getByRole("button", { name: "Delete Lead" }).click();
+    await expect(customer).toHaveCount(0);
+    await page.reload();
+    await expect(customer).toHaveCount(0);
+    await expect(page.getByText("No leads match the selected filters.")).toBeVisible();
+});

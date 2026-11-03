@@ -19,6 +19,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Continuous integration
 
+Test commands and the risk-based test inventory are documented in
+[tests/TESTING.md](tests/TESTING.md). Browser tests use an isolated local HTTP
+double and synthetic accounts; they do not exercise Supabase RLS.
+
 The CI workflow runs on pull requests targeting `main` and on pushes to `main`.
 It installs the locked dependencies with Node.js 24, then runs ESLint, Jest and
 the production build. It can also be started manually from the Actions tab.

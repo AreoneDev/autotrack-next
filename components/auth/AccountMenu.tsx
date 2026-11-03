@@ -24,7 +24,6 @@ export default function AccountMenu() {
             const { error } = await supabase.auth.signOut({ scope: "local" });
             if (error) throw error;
             router.replace("/login");
-            router.refresh();
         } catch {
             setError("Sign out failed. Please try again.");
         } finally { setBusy(false); }

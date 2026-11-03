@@ -24,7 +24,9 @@ export default function AgendaCalendar({
     const startDate = new Date(firstDay);
     startDate.setDate(firstDay.getDate() - firstDay.getDay());
 
-    const days = Array.from({ length: 35 }, (_, index) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cellCount = Math.ceil((firstDay.getDay() + daysInMonth) / 7) * 7;
+    const days = Array.from({ length: cellCount }, (_, index) => {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         return date;
@@ -44,7 +46,11 @@ export default function AgendaCalendar({
 
     function changeMonth(offset: number) {
         const next = new Date(selectedDate);
+        const selectedDay = next.getDate();
+        next.setDate(1);
         next.setMonth(next.getMonth() + offset);
+        const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+        next.setDate(Math.min(selectedDay, lastDay));
         onSelectDate(next);
     }
 
@@ -99,6 +105,8 @@ export default function AgendaCalendar({
                     return (
                         <button
                             key={date.toISOString()}
+                            aria-label={dateKey}
+                            aria-pressed={active}
                             onClick={() => onSelectDate(date)}
                             className={`min-h-[66px] border-b border-r p-2 text-left hover:bg-blue-50 ${
                                 active ? "bg-blue-100" : ""

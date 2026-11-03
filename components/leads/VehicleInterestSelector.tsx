@@ -41,6 +41,7 @@ function AutocompleteField({
         <label className="relative text-sm font-medium text-slate-700">
             {label}
             <input
+                aria-label={label}
                 value={value}
                 disabled={disabled}
                 onFocus={() => {
