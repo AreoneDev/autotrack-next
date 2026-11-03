@@ -17,6 +17,18 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Continuous integration
+
+The CI workflow runs on pull requests targeting `main` and on pushes to `main`.
+It installs the locked dependencies with Node.js 24, then runs ESLint, Jest and
+the production build. It can also be started manually from the Actions tab.
+The build uses placeholder public Supabase values; CI does not connect to a real
+Supabase project or verify database migrations and row-level security policies.
+
+To block a merge when these checks fail, configure a branch protection rule or
+ruleset for `main` in GitHub and require the `Lint, test and build` status check.
+The workflow alone does not prevent merging.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
