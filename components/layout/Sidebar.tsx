@@ -37,7 +37,9 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() =>
+        typeof window !== "undefined" && (window.matchMedia?.("(max-width: 767px)").matches ?? false)
+    );
     const pathname = usePathname();
 
     return (

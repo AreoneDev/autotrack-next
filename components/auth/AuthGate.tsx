@@ -74,7 +74,7 @@ export default function AuthGate({ children }: AuthGateProps) {
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <TopBar />
-                <main id="main-content" tabIndex={0} aria-labelledby="page-title" className="min-h-0 flex-1 overflow-y-auto p-8">
+                <main id="main-content" tabIndex={0} aria-labelledby="page-title" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-8">
                     {children}
                 </main>
             </div>

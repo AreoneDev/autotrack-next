@@ -88,6 +88,8 @@ test("A11Y-02: key pages, skip link, collapsed navigation and notification discl
     await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("main")).toBeFocused();
+    const expand = page.getByRole("button", { name: "Expand sidebar" });
+    if (await expand.count()) await expand.click();
     await page.getByRole("button", { name: "Collapse sidebar" }).focus();
     await page.keyboard.press("Enter");
     for (const name of ["Dashboard", "Leads", "Agenda", "Analytics"]) {
