@@ -7,6 +7,7 @@ Case IDs describe risk-based tests, not certification or exhaustive security cov
 | --- | --- | --- |
 | Large lead lists exhaust connections | Boundary values 0, 1, 199, 200, 201, 1,000; query-count oracle | PERF-DB-01 |
 | Batched joins mix per-lead trims or expose unavailable vehicles | Equivalence partitions and failure injection | PERF-DB-02/03 |
+| Batched embedding disagrees with real PostgREST / relationship RLS | Two authenticated users, shared catalogue, independent overrides | DB-LIVE-04 in tests/supabase/security.live.ts |
 | Session gate bypass or cached private redirect | Decision table: five private paths × ordinary/spoofed/malformed-cookie request | SEC-HTTP-01 |
 | Callback redirects to attacker; old mutation pages accessible | Negative partitions | SEC-HTTP-02 |
 | Stored HTML executes in lead names | Persist → render state transition, text/DOM/execution oracles | SEC-XSS-01 |
@@ -39,12 +40,7 @@ Reports record PostgreSQL version, migration/archive/content hashes, and audit t
 No database dumps are uploaded.
 
 Run `npm run lint`, `npm run typecheck`, `npm run test:coverage`, and
-`npm run test:e2e` for the existing regression suite as well. On Windows managed
-worktrees, Jest may need:
-~~~sh
-npm run test:coverage -- --testMatch "**/tests/**/*.test.ts" "**/tests/**/*.test.tsx"
-~~~
-The canonical Linux CI command remains unchanged.
+`npm run test:e2e` for the existing regression suite as well. The Jest globs inherited from main support Windows managed worktrees. The separate [Supabase guide](supabase/README.md) documents CLI prerequisites for npm run test:supabase; that suite also verifies the new batch embedding against real PostgREST and two authenticated users.
 
 ## Targets, thresholds and isolation
 
@@ -101,8 +97,7 @@ Cluster roles already exist in the isolated container: pg_dump does not back
 them up. Storage objects, secrets, external auth providers, extensions beyond
 this fixture, external integrations, backup encryption/retention, scheduled
 off-site backup delivery, large-volume restore, and hosted PITR/failover remain
-unverified. Production RLS and real email callbacks need separately authorized
-disposable Supabase tests.
+unverified. The separate [local Supabase suite](supabase/README.md) exercises real Auth/PostgREST/RLS against its reconstructed fixture. Deployed schema parity and real email callbacks remain unverified.
 
 Reference behavior: [PostgreSQL pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html),
 [pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html), and

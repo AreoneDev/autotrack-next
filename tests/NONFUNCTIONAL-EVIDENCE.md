@@ -81,3 +81,14 @@ Follow-up reliability correction:
   PostgreSQL server without opening a host port. This is a test-harness fix.
 - Final-head check results are linked from PR #4; the successful measured run
   above is retained with its exact source revision rather than overwritten.
+
+Latest-main integration:
+- Merged origin/main e9f4222 (PR #3) in this isolated branch. Preserved its
+  Supabase CI job, relative Jest globs, command, fixtures and RLS tests.
+- Resolved only the four overlapping text sections by retaining both suites.
+- Added DB-LIVE-04 to verify the new FK embedding with real PostgREST and two
+  authenticated users: independent per-lead/relationship trim overrides,
+  unchanged shared catalogue, missing links and foreign relationship denial.
+- Recovery additionally refuses Docker host/context overrides and nonlocal
+  engine endpoints. It still creates only its own network-isolated container.
+- No shared checkout branch or other chat's working files were changed.
