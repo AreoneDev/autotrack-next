@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,6 +70,7 @@ try {
         sql(readFileSync(join(migrationDir, name), "utf8"));
     }
     sql(readFileSync(join(root, "tests/supabase/migration-checks.sql"), "utf8"));
+    mkdirSync(join(root, "test-results"), { recursive: true });
     run(process.execPath, [
         join(root, "node_modules/jest/bin/jest.js"),
         "--config", "tests/supabase/jest.config.ts", "--runInBand",
