@@ -336,7 +336,8 @@ export default function AgendaPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 pb-6">
+        <div className="flex min-w-80 flex-col gap-6 pb-6">
+
             <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                     <button
@@ -403,6 +404,7 @@ export default function AgendaPage() {
                             <input
                                 id="agenda-lead"
                                 type="search"
+                                aria-label="Lead"
                                 value={leadSearchText}
                                 onChange={(e) =>
                                     handleLeadSearchChange(e.target.value)
@@ -451,6 +453,8 @@ export default function AgendaPage() {
                             </label>
                             <select
                                 id="agenda-task-type"
+                                aria-label="Task type"
+
                                 value={newTaskType}
                                 onChange={(e) => {
                                     setNewTaskType(e.target.value);
@@ -476,6 +480,7 @@ export default function AgendaPage() {
                             <input
                                 id="agenda-task-date"
                                 type="date"
+                                aria-label="Task date"
                                 value={newTaskDate}
                                 onChange={(e) => setNewTaskDate(e.target.value)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
@@ -489,6 +494,7 @@ export default function AgendaPage() {
                             <input
                                 id="agenda-task-time"
                                 type="time"
+                                aria-label="Task time"
                                 value={newTaskTime}
                                 onChange={(e) => setNewTaskTime(e.target.value)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"

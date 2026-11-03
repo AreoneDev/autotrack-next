@@ -31,8 +31,8 @@ async function createLead(page: Page) {
 
 async function createTask(page: Page) {
     await page.getByRole("link", { name: "A11y Customer", exact: true }).click();
-    await page.getByRole("combobox", { name: "Task type", exact: true }).selectOption("Follow-up");
-    await page.getByLabel("Task notes", { exact: true }).fill("Synthetic accessibility task");
+    await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
+    await page.getByLabel("New task notes", { exact: true }).fill("Synthetic accessibility task");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit task Follow-up", exact: true })).toBeVisible();
 }
@@ -43,6 +43,7 @@ test.beforeEach(async ({ request }) => {
 
 test("A11Y-01: login modes, announced error and keyboard submission", async ({ page }, info) => {
     await page.goto("/login");
+    await expect(page.getByRole("button", { name: "Password", exact: true })).toBeEnabled();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Password", exact: true })).toBeFocused();
     for (const mode of ["Register", "Email link", "Password"]) {
@@ -137,10 +138,10 @@ test("A11Y-04: lead details, edit controls, keyboard autocomplete and safe delet
     await page.getByRole("link", { name: "A11y Customer", exact: true }).click();
     await expect(page.getByRole("button", { name: "Modify", exact: true })).toBeVisible();
     await scan(page, info, "lead-detail");
-    await page.getByRole("combobox", { name: "Task type", exact: true }).selectOption("Follow-up");
+    await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await page.getByRole("button", { name: "Edit task Follow-up", exact: true }).click();
-    await expect(page.getByLabel("Edit task title", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Task title", { exact: true })).toBeVisible();
     await scan(page, info, "task-edit");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     // A synthetic catalog response exercises the actual client combobox widget.
@@ -184,6 +185,6 @@ test("A11Y-05: calendar has one day tab stop and arrow keys cross month boundari
     await page.keyboard.press("ArrowUp");
     await expect(calendar.getByRole("button", { name: /^22 February 2026/ })).toBeFocused();
     await expect(calendar.locator('button[aria-pressed][tabindex="0"]')).toHaveCount(1);
-    for (const name of ["Lead", "Task Type", "Date", "Time", "Short Description / Notes"]) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
+    for (const name of ["Lead", "Task type", "Task date", "Task time", "Short Description / Notes"]) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
     await scan(page, info, "calendar-navigation");
 });
