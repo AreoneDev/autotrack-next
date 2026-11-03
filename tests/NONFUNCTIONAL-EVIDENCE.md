@@ -92,3 +92,7 @@ Latest-main integration:
 - Recovery additionally refuses Docker host/context overrides and nonlocal
   engine endpoints. It still creates only its own network-isolated container.
 - No shared checkout branch or other chat's working files were changed.
+
+- Recovery cleanup uses docker rm -fv on only the newly returned container ID,
+  including its image-created anonymous PostgreSQL data volume. No global prune
+  or existing/named volume is targeted.

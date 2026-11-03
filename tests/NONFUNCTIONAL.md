@@ -66,10 +66,10 @@ Run `npm run lint`, `npm run typecheck`, `npm run test:coverage`, and
   remain visible in raw reports; a green threshold does not mean zero vulnerabilities.
   The script does not apply fixes or suppress advisories.
 - REC-01: Docker creates a uniquely named PostgreSQL 17 container with
-  `--network none`, no host ports/mounts, synthetic users, and no imported
+  `--network none`, no host ports/bind mounts, synthetic users, and no imported
   credentials. Host `DATABASE_URL`, `PGHOST`, and Supabase values are never used.
   It creates separate source, restored, and corrupt-archive databases; only the
-  generated container ID can be removed. Cleanup failure fails the run.
+  generated container ID and its anonymous data volumes can be removed (docker rm -fv). Cleanup failure fails the run.
 - Recovery fixture: 1,000 initial leads, 2,000 tasks, 1,000 notifications, Unicode,
   nulls, catalogue/relationship rows, a second owner and a deletion tombstone.
   The historical migration's selected-email literal is replaced only in memory

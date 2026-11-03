@@ -260,7 +260,7 @@ describe("Real repository and database integration", () => {
         await ok(a.db.from("lead_trade_in_vehicles").insert({
             lead_id: rows[0].lead_id, vehicle_id: 1, trim_override: "Trade",
         }));
-        const inputs = [...rows, b.lead].map(row => new Lead({ leadID: Number(row.lead_id) }));
+        const inputs = [...rows, b.lead].map(row => new Lead({ leadID: Number(row.lead_id), firstName: String(row.first_name ?? "Synthetic") }));
         const hydrated = await hydrateLeadTableData(inputs, a.db);
         expect(hydrated[0].vehicleInterest?.trim).toBe("Interest0");
         expect(hydrated[1].vehicleInterest?.trim).toBe("Interest1");
@@ -271,7 +271,7 @@ describe("Real repository and database integration", () => {
         expect(hydrated[2].vehicleInterest).toBeNull();
         expect(hydrated[2].tradeInVehicle).toBeNull();
         expect((await ok(a.db.from("vehicles").select("trim").eq("vehicle_id", 1).single())).trim).toBe("Base");
-        const other = await hydrateLeadTableData(rows.map(row => new Lead({ leadID: Number(row.lead_id) })), b.db);
+        const other = await hydrateLeadTableData(rows.map(row => new Lead({ leadID: Number(row.lead_id), firstName: String(row.first_name ?? "Synthetic") })), b.db);
         expect(other.every(lead => lead.vehicleInterest === null && lead.tradeInVehicle === null)).toBe(true);
     });
 

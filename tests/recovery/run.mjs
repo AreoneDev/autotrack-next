@@ -94,7 +94,7 @@ try {
     process.exitCode = 1;
 } finally {
     if (container && /^[a-f0-9]{64}$/.test(container)) {
-        const cleanup = docker(["rm", "-f", container], undefined, true);
+        const cleanup = docker(["rm", "-f", "-v", container], undefined, true);
         report.containerRemoved = cleanup.status === 0;
         if (!report.containerRemoved) { report.passed = false; process.exitCode = 1; }
     }
