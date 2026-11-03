@@ -26,11 +26,14 @@ double and synthetic accounts; they do not exercise Supabase RLS.
 The CI workflow runs on pull requests targeting `main` and on pushes to `main`.
 It installs the locked dependencies with Node.js 24, then runs ESLint, Jest and
 the production build. It can also be started manually from the Actions tab.
-The build uses placeholder public Supabase values; CI does not connect to a real
-Supabase project or verify database migrations and row-level security policies.
+The build uses placeholder public Supabase values. A separate CI job runs a
+disposable local Supabase stack, unmodified migrations, two synthetic Auth users
+and real repository/RLS checks without hosted project secrets. See
+[the Supabase test guide](tests/supabase/README.md) for prerequisites and limits.
 
 To block a merge when these checks fail, configure a branch protection rule or
-ruleset for `main` in GitHub and require the `Lint, test and build` status check.
+ruleset for `main` in GitHub and require both `Lint, test and build` and
+`Disposable Supabase integration and RLS` status checks.
 The workflow alone does not prevent merging.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
