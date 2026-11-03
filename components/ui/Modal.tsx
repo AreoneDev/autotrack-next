@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
 
 // Mount only while open. Native modal dialogs make the background inert,
 // contain keyboard focus, handle Escape and restore the invoking control.
@@ -11,7 +11,9 @@ export default function Modal({ children, labelledBy, onClose, className = "" }:
     className?: string;
 }) {
     const ref = useRef<HTMLDialogElement>(null);
-    useEffect(() => {
+    // Restore focus before paint so a subsequent action cannot be stolen by
+    // a late passive cleanup after the dialog disappears.
+    useLayoutEffect(() => {
         const dialog = ref.current!;
         const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         dialog.showModal();

@@ -26,7 +26,8 @@ async function createLead(page: Page) {
     await page.getByRole("button", { name: "Create new lead" }).click();
     await page.getByLabel("First Name", { exact: true }).fill("A11y");
     await page.getByLabel("Last Name", { exact: true }).fill("Customer");
-    await refreshed(page, () => page.getByRole("button", { name: "Create Lead", exact: true }).click());
+    await page.getByRole("button", { name: "Create Lead", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Create Lead", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "A11y Customer", exact: true })).toBeVisible();
 }
 
