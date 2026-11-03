@@ -151,6 +151,9 @@ describe("RLS decision table: self / other / anonymous", () => {
     });
     it.each([...entities.map(e => e[0]), ...links, "imported_cars", "sync_deleted"])(
         "RLS-08 %s: anonymous CRUD denied", async table => {
+            const key = entities.find(entity => entity[0] === table)?.[1]
+                ?? (table === "sync_deleted" ? "sync_id" : table === "imported_cars" ? "id" : "lead_id");
+            const value = table === "sync_deleted" ? a.lead.sync_id : 1;
             await denied(anonymous.from(table).select());
             await denied(anonymous.from(table).insert(table === "leads" ? { first_name: "Anonymous" }
                 : table === "vehicles" ? { model: "Anonymous" }
@@ -158,13 +161,13 @@ describe("RLS decision table: self / other / anonymous", () => {
                 : table === "sync_deleted" ? { owner_id: a.id, entity: "leads", sync_id: randomUUID(), version: 1 }
                 : links.includes(table as typeof links[number]) ? { lead_id: a.lead.lead_id, vehicle_id: 1 }
                 : { title: "Anonymous" }));
-            // Empty predicates still require table-level privileges.
+            // A valid filtered mutation must reach authorization, not pg_safeupdate.
             await denied(anonymous.from(table).update(table === "leads" ? { first_name: "Anonymous" }
                 : table === "vehicles" ? { model: "Anonymous" }
                 : table === "imported_cars" ? { make: "Anonymous" }
                 : table === "sync_deleted" ? { version: 999 }
-                : links.includes(table as typeof links[number]) ? { vehicle_id: 1 } : { title: "Anonymous" }).select());
-            await denied(anonymous.from(table).delete().select());
+                : links.includes(table as typeof links[number]) ? { vehicle_id: 1 } : { title: "Anonymous" }).eq(key, value).select());
+            await denied(anonymous.from(table).delete().eq(key, value).select());
         }
     );
     it("AUTH-LIVE-01 invalid JWT rejected by gateway", async () => {
