@@ -24,6 +24,7 @@ const config: Config = {
     },
 
     testMatch: [
+        // Avoid expanding Windows worktree paths (e.g. ".codex") into glob syntax.
         "**/tests/**/*.test.ts",
         "**/tests/**/*.test.tsx",
     ],

@@ -336,7 +336,7 @@ export default function AgendaPage() {
     }
 
     return (
-        <main className="flex flex-col gap-6 pb-6">
+        <main className="flex min-w-80 flex-col gap-6 pb-6">
             <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                     <button
@@ -348,6 +348,7 @@ export default function AgendaPage() {
 
                     <input
                         type="date"
+                        aria-label="Agenda date"
                         value={formatDateInput(selectedDate)}
                         onChange={(e) =>
                             selectAgendaDate(createDateTime(e.target.value, "00:00"))
@@ -399,6 +400,7 @@ export default function AgendaPage() {
                             </label>
                             <input
                                 type="search"
+                                aria-label="Lead"
                                 value={leadSearchText}
                                 onChange={(e) =>
                                     handleLeadSearchChange(e.target.value)
@@ -446,6 +448,7 @@ export default function AgendaPage() {
                                 Task Type
                             </label>
                             <select
+                                aria-label="Task type"
                                 value={newTaskType}
                                 onChange={(e) => {
                                     setNewTaskType(e.target.value);
@@ -470,6 +473,7 @@ export default function AgendaPage() {
                             </label>
                             <input
                                 type="date"
+                                aria-label="Task date"
                                 value={newTaskDate}
                                 onChange={(e) => setNewTaskDate(e.target.value)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
@@ -482,6 +486,7 @@ export default function AgendaPage() {
                             </label>
                             <input
                                 type="time"
+                                aria-label="Task time"
                                 value={newTaskTime}
                                 onChange={(e) => setNewTaskTime(e.target.value)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"

@@ -96,3 +96,7 @@ Latest-main integration:
 - Recovery cleanup uses docker rm -fv on only the newly returned container ID,
   including its image-created anonymous PostgreSQL data volume. No global prune
   or existing/named volume is targeted.
+
+- Subsequently integrated main ec4352a (PR #5), preserving its business journeys,
+  UI fixes, HTTP failure injection and expanded E2E inventory. The one overlapping
+  test-strategy paragraph retains both completed coverage and remaining risks.

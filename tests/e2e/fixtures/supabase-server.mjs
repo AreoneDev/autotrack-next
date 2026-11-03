@@ -13,12 +13,23 @@ const user = {
 };
 let tables;
 let nextId;
-function reset() {
+let failure;
+function reset(seed = {}) {
     tables = {
         leads: [], tasks: [], notifications: [], vehicles: [],
         lead_vehicle_interests: [], lead_trade_in_vehicles: [],
     };
     nextId = 100;
+    failure = null;
+    for (const [table, rows] of Object.entries(seed)) {
+        if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
+        tables[table] = rows;
+        for (const row of rows) {
+            const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
+            const id = row[idColumn];
+            if (Number.isInteger(id)) nextId = Math.max(nextId, id + 1);
+        }
+    }
 }
 reset();
 
@@ -33,6 +44,16 @@ function session() {
 function filterRows(rows, search) {
     return rows.filter((row) => [...search.entries()].every(([column, filter]) => {
         if (["select", "order", "limit", "offset", "on_conflict"].includes(column)) return true;
+        if (column === "or") {
+            return filter.slice(1, -1).split(",").some((clause) => {
+                const match = /^(\w+)\.ilike\.(.*)$/.exec(clause);
+                if (!match) throw new Error(`Unsupported test search: ${clause}`);
+                const pattern = match[2].split("").map((character) =>
+                    character === "%" ? ".*" : character === "_" ? "." : character.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+                ).join("");
+                return new RegExp(`^${pattern}$`, "i").test(String(row[match[1]] ?? ""));
+            });
+        }
         const dot = filter.indexOf(".");
         const operation = filter.slice(0, dot);
         const value = filter.slice(dot + 1);
@@ -55,10 +76,18 @@ const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://127.0.0.1:54329");
     try {
         if (url.pathname === "/health") return send(200, { ready: true });
-        if (url.pathname === "/__test__/reset" && request.method === "POST") { reset(); return send(200, {}); }
         let text = "";
         for await (const chunk of request) text += chunk;
         const body = text ? JSON.parse(text) : {};
+        if (url.pathname === "/__test__/reset" && request.method === "POST") { reset(body); return send(200, {}); }
+        if (url.pathname === "/__test__/state" && request.method === "GET") return send(200, tables);
+        if (url.pathname === "/__test__/fail-next" && request.method === "POST") {
+            if (!Object.hasOwn(tables, body.table) || !["POST", "PATCH", "DELETE"].includes(body.method)) {
+                return send(400, { message: "Invalid failure rule" });
+            }
+            failure = body;
+            return send(200, {});
+        }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
             if (body.email !== user.email || body.password !== "test-password-123") {
                 return send(400, { code: "invalid_credentials", msg: "Invalid login credentials" });
@@ -77,6 +106,10 @@ const server = createServer(async (request, response) => {
             return send(404, { message: `Unimplemented test endpoint: ${request.method} ${url.pathname}` });
         }
         if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+        if (failure?.table === table && failure.method === request.method) {
+            failure = null;
+            return send(503, { message: "Synthetic write failure" });
+        }
         let selected = filterRows(tables[table], url.searchParams);
         if (request.method === "GET") {
             if (url.searchParams.get("select")?.includes("vehicles(*)")) {
