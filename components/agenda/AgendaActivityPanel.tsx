@@ -109,9 +109,9 @@ export default function AgendaActivityPanel({
                 </span>
             </div>
 
-            <div className="h-[280px] space-y-3 overflow-y-auto pr-2">
+            <div tabIndex={0} role="region" aria-label="Daily activities list" className="h-[280px] space-y-3 overflow-y-auto pr-2">
                 {loading ? (
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-500">
                         Loading activities...
                     </p>
                 ) : null}
@@ -195,11 +195,7 @@ export default function AgendaActivityPanel({
                                             void onToggleTask(activity);
                                         }}
                                         className={`inline-flex min-w-28 shrink-0 items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-60 ${taskStyles?.badge}`}
-                                        aria-label={`Mark task as ${
-                                            activity.completed
-                                                ? "uncompleted"
-                                                : "completed"
-                                        }`}
+                                        aria-label={`${toggling ? "Saving..." : activity.completed ? "Completed" : isOverdue(activity) ? "Overdue" : "Uncompleted"}: ${activity.title}. Mark task as ${activity.completed ? "uncompleted" : "completed"}`}
                                     >
                                         {activity.completed ? (
                                             <CheckCircle2 size={14} />
@@ -224,7 +220,7 @@ export default function AgendaActivityPanel({
                     })}
 
                 {!loading && agendaActivities.length === 0 ? (
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-500">
                         No activities for this date.
                     </p>
                 ) : null}

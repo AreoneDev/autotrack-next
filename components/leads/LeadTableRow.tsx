@@ -39,6 +39,7 @@ export default function LeadTableRow({
                     />
 
                     <select
+                        aria-label={`Status for ${lead.getLeadName()}`}
                         value={lead.status ? "ACTIVE" : "LOST"}
                         onChange={(event) =>
                             void onStatusChange(
@@ -47,7 +48,7 @@ export default function LeadTableRow({
                             )
                         }
                         disabled={updatingStatus}
-                        className="rounded border px-2 py-1 text-sm text-gray-900 disabled:cursor-wait disabled:bg-slate-100 disabled:text-slate-400"
+                        className="rounded border px-2 py-1 text-sm text-gray-900 disabled:cursor-wait disabled:bg-slate-100 disabled:text-slate-500"
                     >
                         <option value="ACTIVE">Active</option>
                         <option value="LOST">Lost</option>
@@ -61,6 +62,7 @@ export default function LeadTableRow({
                         onClick={() => onViewBrief(lead)}
                         className="cursor-pointer text-gray-500 hover:text-blue-600"
                         title="View lead brief"
+                        aria-label={`View lead brief for ${lead.getLeadName()}`}
                     >
                         <Eye size={18} strokeWidth={2} />
                     </button>
@@ -106,6 +108,7 @@ export default function LeadTableRow({
                         href={`/leads/${lead.leadID}`}
                         className="text-blue-600 hover:text-blue-800"
                         title="Modify Lead"
+                        aria-label={`Modify Lead ${lead.getLeadName()}`}
                     >
                         <Pencil size={18} />
                     </Link>
@@ -115,6 +118,7 @@ export default function LeadTableRow({
                         disabled={deleting}
                         className="cursor-pointer text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-300"
                         title="Delete Lead"
+                        aria-label={`Delete Lead ${lead.getLeadName()}`}
                     >
                         <Trash2 size={18} />
                     </button>

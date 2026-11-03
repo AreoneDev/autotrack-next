@@ -1,7 +1,8 @@
+import { backendURL } from "./fixtures/endpoints";
 import { test, expect } from "@playwright/test";
 
 test("E2E-LEAD-01: create → search → change status → reload → delete", async ({ page, request }) => {
-    expect((await request.post("http://127.0.0.1:54329/__test__/reset")).ok()).toBe(true);
+    expect((await request.post(`${backendURL}/__test__/reset`)).ok()).toBe(true);
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
     await page.getByLabel("Password", { exact: true }).fill("test-password-123");

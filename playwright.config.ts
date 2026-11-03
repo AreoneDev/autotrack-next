@@ -1,8 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Fixed loopback endpoints prevent E2E from reading local production credentials.
-const appURL = "http://127.0.0.1:3100";
-const backendURL = "http://127.0.0.1:54329";
+import { appPort, appURL, backendURL } from "./tests/e2e/fixtures/endpoints";
 
 export default defineConfig({
     testDir: "./tests/e2e",
@@ -30,7 +28,7 @@ export default defineConfig({
             reuseExistingServer: false,
         },
         {
-            command: "npm run build && npm run start -- --hostname 127.0.0.1 --port 3100",
+            command: `npm run build && npm run start -- --hostname 127.0.0.1 --port ${appPort}`,
             url: `${appURL}/login`,
             timeout: 180000,
             reuseExistingServer: false,

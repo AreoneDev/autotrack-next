@@ -2,9 +2,9 @@ import { createServer } from "node:http";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
-const backendPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT ?? 54329);
-if (![54329, 54339].includes(backendPort)) throw new Error("Unsupported isolated test port");
-const appPort = backendPort === 54339 ? 3200 : 3100;
+const backendPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT ?? process.env.E2E_BACKEND_PORT ?? 54329);
+const appPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT === "54339" ? 3200 : (process.env.E2E_APP_PORT ?? 3100));
+if (![appPort, backendPort].every((port) => Number.isInteger(port) && port >= 1024 && port <= 65535)) throw new Error("Invalid E2E port");
 const user = {
     id: "11111111-1111-4111-8111-111111111111", aud: "authenticated", role: "authenticated",
     email: "ada@example.test", email_confirmed_at: "2026-01-01T00:00:00Z",
@@ -73,7 +73,7 @@ const server = createServer(async (request, response) => {
     response.setHeader("Content-Type", "application/json");
     const send = (status, data) => { response.writeHead(status); response.end(JSON.stringify(data)); };
     if (request.method === "OPTIONS") return send(200, {});
-    const url = new URL(request.url, "http://127.0.0.1:54329");
+    const url = new URL(request.url, `http://127.0.0.1:${backendPort}`);
     try {
         if (url.pathname === "/health") return send(200, { ready: true });
         let text = "";

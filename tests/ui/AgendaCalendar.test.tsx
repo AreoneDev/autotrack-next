@@ -12,7 +12,7 @@ describe("UI-CAL — calendar boundaries", () => {
 
     it("UI-CAL-01: six-week months include the final day", () => {
         setup(new Date(2026, 7, 1)); // August starts on Saturday and needs six rows.
-        expect(screen.getByRole("button", { name: "2026-08-31" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /^31 August 2026/ })).toBeInTheDocument();
     });
 
     it.each([
@@ -29,11 +29,11 @@ describe("UI-CAL — calendar boundaries", () => {
 
     it("UI-CAL-03: selected and past task badges appear; future badges do not", async () => {
         const select = setup(new Date(2026, 5, 20), { "2026-06-19": 3, "2026-06-21": 8 });
-        expect(screen.getByRole("button", { name: "2026-06-20" })).toHaveTextContent("2 undone");
-        expect(screen.getByRole("button", { name: "2026-06-20" })).toHaveAttribute("aria-pressed", "true");
-        expect(screen.getByRole("button", { name: "2026-06-19" })).toHaveTextContent("3 undone");
+        expect(screen.getByRole("button", { name: /^20 June 2026/ })).toHaveTextContent("2 undone");
+        expect(screen.getByRole("button", { name: /^20 June 2026/ })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByRole("button", { name: /^19 June 2026/ })).toHaveTextContent("3 undone");
         expect(screen.queryByText("8 undone")).not.toBeInTheDocument();
-        await userEvent.setup().click(screen.getByRole("button", { name: "2026-06-19" }));
+        await userEvent.setup().click(screen.getByRole("button", { name: /^19 June 2026/ }));
         expect(select).toHaveBeenCalledWith(new Date(2026, 5, 19));
     });
 });

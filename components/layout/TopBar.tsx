@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AccountMenu from "@/components/auth/AccountMenu";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
     Bell,
@@ -82,6 +82,7 @@ export default function TopBar() {
               };
 
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
+    const notificationsButton = useRef<HTMLButtonElement>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [topbarNotifications, setTopbarNotifications] = useState<
         RecentActivityItem[]
@@ -220,7 +221,7 @@ export default function TopBar() {
         <header className="flex h-20 items-center justify-between border-b bg-white px-8">
 
             <div>
-                <h1 className="text-2xl font-bold text-slate-950">
+                <h1 id="page-title" className="text-2xl font-bold text-slate-950">
                     {pageInfo.title}
                 </h1>
                 <p className="text-sm text-slate-500">
@@ -230,14 +231,19 @@ export default function TopBar() {
 
             <div className="flex items-center gap-8">
 
-                <div className="relative">
+                <div className="relative"
+                    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setNotificationsOpen(false); }}
+                    onKeyDown={(event) => { if (event.key === "Escape" && notificationsOpen) { setNotificationsOpen(false); notificationsButton.current?.focus(); } }}>
                     <button
                         type="button"
                         onClick={() =>
                             setNotificationsOpen((current) => !current)
                         }
                         className="relative rounded-full p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-                        aria-label="Open notifications"
+                        ref={notificationsButton}
+                        aria-expanded={notificationsOpen}
+                        aria-controls={notificationsOpen ? "notifications-panel" : undefined}
+                        aria-label={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
                     >
                         <Bell size={20} />
                         {unreadCount > 0 ? (
@@ -248,7 +254,7 @@ export default function TopBar() {
                     </button>
 
                     {notificationsOpen ? (
-                        <div className="absolute right-0 top-12 z-50 w-96 rounded-lg border border-slate-200 bg-white shadow-xl">
+                        <div id="notifications-panel" role="region" aria-label="Notifications" className="absolute right-0 top-12 z-50 w-96 rounded-lg border border-slate-200 bg-white shadow-xl">
                             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                                 <div>
                                     <p className="font-semibold text-slate-950">
@@ -324,7 +330,7 @@ export default function TopBar() {
                                                 <p className="mt-1 line-clamp-2 text-sm text-slate-600">
                                                     {activity.detail}
                                                 </p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                                     {activity.leadName ? (
                                                         <span className="font-medium text-slate-500">
                                                             {activity.leadName}

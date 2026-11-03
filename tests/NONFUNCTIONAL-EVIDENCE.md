@@ -100,3 +100,23 @@ Latest-main integration:
 - Subsequently integrated main ec4352a (PR #5), preserving its business journeys,
   UI fixes, HTTP failure injection and expanded E2E inventory. The one overlapping
   test-strategy paragraph retains both completed coverage and remaining risks.
+
+Dependency remediation investigation (2026-11-03):
+- Current npm audit: 0 high/critical, 32 moderate, 3 low in the complete graph;
+  production graph remains separately audited. The root advisories are
+  GHSA-g3hv-75wg-m249 (minimatch), GHSA-3g3m-2fjr-6pw4 (glob), and
+  GHSA-gcqx-w48m-w2h4 (deepmerge).
+- The deepmerge advisory lists no patched release, and Jest 30.5.2 requires
+  deepmerge ^4.3.1. A forced downgrade to 4.1.1 violates that dependency range.
+- A temporary global minimatch 11 / glob 14 / deepmerge 4.1.1 override produced
+  zero audit findings and passed the existing local lint, typecheck and Jest
+  suite, but was rejected: minimatch 11 exports an object, while installed
+  eslint-plugin-react rules call the older minimatch export as a function.
+  A direct compatibility check produced TypeError: m is not a function. The
+  normal project lint did not exercise that configurable rule path.
+- A narrower Jest-only glob override left 31 moderate and 3 low findings while
+  crossing Jest's declared major-version range. It was also removed. Neither
+  candidate is committed; audit findings are not suppressed or waived.
+- PR #6 accessibility changes were integrated from main and the two E2E port
+  configurations retained. Full release requires compatible upstream fixes or a
+  separately reviewed replacement/patch and complete regression checks.

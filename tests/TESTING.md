@@ -13,6 +13,7 @@ The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https
 | Lead search, filtering, creation, status rollback and deletion | Partitions, boundaries, transitions | UI-LEAD, E2E-LEAD |
 | Task completion and vehicle form | Transitions, negative cases | UI-TASK, UI-VEH |
 | Calendar month lengths, leap years, six-week months | Boundaries | UI-CAL |
+| Keyboard focus, modal boundaries, announcements, names, contrast, navigation and key page states | State transitions, boundary values, representative state partitions | A11Y-01–05, A11Y-AC-01; `tests/e2e/accessibility.spec.ts`, `tests/ui/Autocomplete.test.tsx` |
 | Lead-detail cancel, failed write/retry, edited fields after reload, CLOSED → inactive status and missing lead navigation | Transitions, failure injection, partitions | E2E-DETAIL-01, E2E-DETAIL-03; `tests/e2e/lead-detail.spec.ts` |
 | Communication write failure/retry, exactly one notification across detail/dashboard/agenda | Transitions, cross-page persistence | E2E-DETAIL-02 |
 | Follow-up required type/title, create/edit/complete/reopen/delete, failure recovery and late-evening local dates | Decision table, transitions, date boundary | E2E-TASK-01; `tests/e2e/follow-up-tasks.spec.ts` |
@@ -20,6 +21,7 @@ The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https
 | Agenda lead/type validation, case-insensitive search, create failure/retry, selected dates and refresh/reload | Decision table, partitions, transitions | E2E-AGENDA-01 |
 | Agenda overdue completion failure/retry, complete/reopen across reload and dashboard overdue metric | Transitions, cross-page persistence | E2E-AGENDA-02 |
 | Empty dashboard and empty selected agenda date | Empty partition | E2E-DASH-02 |
+
 
 Fixtures contain synthetic data. Unit, integration and React tests are deterministic and never require Supabase credentials. `tests/integration/persistence/real/` exercises real adapter code with a scripted client double: it does not execute SQL or prove row-level security. Playwright builds the application against a loopback-only, resettable HTTP double on ports 3100 and 54329. Do not reuse those ports for a real service during the run. The double implements only the paths needed by these tests; it is not a Supabase emulator. Browser tests run serially so their resets do not race. The suite covers Chromium, Firefox, WebKit and a mobile Chromium viewport.
 
@@ -33,6 +35,8 @@ npm run test:ui
 npm run test:coverage
 npx playwright install chromium firefox webkit
 npm run test:e2e
+# Accessibility subset (also included in test:e2e and CI)
+npm run test:a11y
 npm run typecheck
 npm run lint
 ```
@@ -43,4 +47,7 @@ The separate [disposable Supabase suite](supabase/README.md) runs unmodified mig
 
 Performance/load, security regression, dependency auditing and isolated backup/recovery are described in [NONFUNCTIONAL.md](NONFUNCTIONAL.md).
 
-Remaining high-priority work: verify deployed schema parity and real email callbacks; cover vehicle-association partial failures and real database transactions; add keyboard/screen-reader accessibility and broader security coverage. No current test should be interpreted as evidence of production RLS enforcement.
+Remaining high-priority work: verify deployed schema parity and real email callbacks; cover vehicle-association partial failures and real database transactions; extend manual screen-reader and zoom/reflow testing and broader security coverage. No current test should be interpreted as evidence of production RLS enforcement.
+
+Accessibility behavior, scan scope and remaining manual checks are described in [ACCESSIBILITY.md](ACCESSIBILITY.md).
+For simultaneous worktrees, set E2E_APP_PORT and E2E_BACKEND_PORT to unused ports. Both services remain on 127.0.0.1 and Playwright refuses to reuse an existing server.
