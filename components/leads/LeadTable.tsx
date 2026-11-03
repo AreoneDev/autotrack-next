@@ -585,7 +585,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
     }
 
     return (
-        <div>
+        <div className="pb-32">
             <div className="mb-8 rounded-lg border bg-white p-6 shadow-sm">
                 <div className="border-b border-slate-100 pb-4">
                     <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
@@ -615,6 +615,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                         </h3>
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             <select
+                                aria-label="Filter by status"
                                 value={statusFilter}
                                 onChange={(event) =>
                                     setStatusFilter(event.target.value)
@@ -627,6 +628,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             </select>
 
                             <select
+                                aria-label="Filter by stage"
                                 value={stageFilter}
                                 onChange={(event) =>
                                     setStageFilter(event.target.value)
@@ -643,6 +645,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             </select>
 
                             <select
+                                aria-label="Filter by trade-in"
                                 value={tradeInFilter}
                                 onChange={(event) =>
                                     setTradeInFilter(event.target.value)
@@ -655,6 +658,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             </select>
 
                             <select
+                                aria-label="Filter by score"
                                 value={scoreFilter}
                                 onChange={(event) =>
                                     setScoreFilter(event.target.value)
@@ -731,7 +735,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                 </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
                 {deleteError ? (
                     <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {deleteError}

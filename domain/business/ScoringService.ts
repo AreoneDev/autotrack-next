@@ -542,8 +542,11 @@ export class ScoringService {
 
     private getDaysDiff(startDate: Date, endDate: Date): number {
         const millisecondsPerDay = 24 * 60 * 60 * 1000;
+        // Cadence follows local calendar days, including 23/25-hour DST days.
+        const startDay = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endDay = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
         return Math.floor(
-            (endDate.getTime() - startDate.getTime()) / millisecondsPerDay
+            (endDay - startDay) / millisecondsPerDay
         );
     }
 
