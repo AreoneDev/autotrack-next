@@ -31,10 +31,11 @@ try {
     container = docker(["run", "-d", "--network", "none", "--name", "autotrack-recovery-" + randomBytes(6).toString("hex"),
         "-e", "POSTGRES_PASSWORD=synthetic-disposable-only", "postgres:17"]).stdout.trim();
     if (!/^[a-f0-9]{64}$/.test(container)) throw new Error("Unexpected container ID");
-    // Synchronous probes avoid requiring a host port or accepting any DATABASE_URL.
+    // The image boots a temporary Unix-socket-only server during initdb.
+    // Internal TCP readiness waits for the final server; no host port is exposed.
     let ready = false;
     for (let i = 0; i < 60; i++) {
-        if (exec(["pg_isready", "-U", "postgres"], undefined, true).status === 0) { ready = true; break; }
+        if (exec(["pg_isready", "-h", "127.0.0.1", "-U", "postgres"], undefined, true).status === 0) { ready = true; break; }
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
     }
     if (!ready) throw new Error("Disposable PostgreSQL did not become ready");

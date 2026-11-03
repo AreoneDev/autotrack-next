@@ -26,8 +26,9 @@ double and synthetic accounts; they do not exercise Supabase RLS.
 The CI workflow runs on pull requests targeting `main` and on pushes to `main`.
 It installs the locked dependencies with Node.js 24, then runs ESLint, Jest and
 the production build. It can also be started manually from the Actions tab.
-The build uses placeholder public Supabase values; CI does not connect to a real
-Supabase project or verify database migrations and row-level security policies.
+The primary browser build uses a loopback HTTP double and synthetic credentials;
+CI does not connect to a hosted Supabase project. The recovery job separately
+executes committed migrations and role policies against a minimal PostgreSQL fixture.
 
 The separate nonfunctional workflow runs bounded loopback performance/load, security and dependency checks, plus a network-isolated PostgreSQL recovery drill. See [tests/NONFUNCTIONAL.md](tests/NONFUNCTIONAL.md) for commands, budgets and evidence limits.
 

@@ -71,3 +71,13 @@ Merge/deployment:
   force-audit downgrade suggestions were not applied.
 - A deployment cannot be claimed from a passing build alone; verify a deployment
   associated with the actual merged commit if this PR is later approved to merge.
+
+Follow-up reliability correction:
+- The documentation-only follow-up run at 686ee1a exposed a container startup
+  race in recovery: pg_isready observed the image's temporary Unix-socket-only
+  initdb server, which then stopped before psql connected. Cleanup still passed.
+- The runner now probes TCP 127.0.0.1 inside the network-isolated container.
+  The temporary initdb server has TCP disabled, so readiness waits for the final
+  PostgreSQL server without opening a host port. This is a test-harness fix.
+- Final-head check results are linked from PR #4; the successful measured run
+  above is retained with its exact source revision rather than overwritten.
