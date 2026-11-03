@@ -70,7 +70,7 @@ export default function AuthGate({ children }: AuthGateProps) {
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <a href="#main-content" className="skip-link">Skip to main content</a>
+            <a tabIndex={0} href="#main-content" className="skip-link">Skip to main content</a>
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <TopBar />

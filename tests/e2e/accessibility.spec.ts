@@ -77,6 +77,7 @@ test("A11Y-02: key pages, skip link, collapsed navigation and notification discl
         await scan(page, info, path.slice(1));
     }
     await page.goto("/leads");
+    await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
     await page.keyboard.press("Enter");
