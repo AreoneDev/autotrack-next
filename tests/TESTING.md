@@ -39,4 +39,3 @@ Remaining high-priority work: verify deployed schema parity and real email callb
 
 Accessibility behavior, scan scope and remaining manual checks are described in [ACCESSIBILITY.md](ACCESSIBILITY.md).
 For simultaneous worktrees, set `E2E_APP_PORT` and `E2E_BACKEND_PORT` to unused ports (for example 3112 and 54341). Only the port numbers are configurable; both services remain on `127.0.0.1`, and Playwright refuses to reuse an existing server.
-
