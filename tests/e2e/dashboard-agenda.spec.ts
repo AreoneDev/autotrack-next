@@ -75,6 +75,7 @@ test("E2E-AGENDA-01: validate lead and type, search, fail creation, retry and na
     await page.reload();
     await page.getByLabel("Agenda date", { exact: true }).fill(day(1));
     await expect(appointment).toBeVisible();
+    await expect(appointment.getByRole("link")).toBeVisible();
     await appointment.getByRole("link").click();
     await expect(page).toHaveURL("/leads/1");
     await expect(page.getByText("Synthetic appointment notes", { exact: true })).toBeVisible();

@@ -336,7 +336,7 @@ export default function AgendaPage() {
     }
 
     return (
-        <main className="flex flex-col gap-6 pb-6">
+        <main className="flex min-w-80 flex-col gap-6 pb-6">
             <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                     <button

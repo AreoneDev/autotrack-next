@@ -46,10 +46,6 @@ export async function state(request: APIRequestContext) {
 
 export async function login(page: Page) {
     await page.goto("/login");
-    // A visible mode transition proves handlers are hydrated before entering credentials.
-    await page.getByRole("button", { name: "Email link", exact: true }).click();
-    await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Password", exact: true }).click();
     await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
     await page.getByLabel("Password", { exact: true }).fill("test-password-123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();

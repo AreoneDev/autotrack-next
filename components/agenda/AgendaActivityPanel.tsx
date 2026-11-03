@@ -171,7 +171,7 @@ export default function AgendaActivityPanel({
                                 {activity.leadId ? (
                                     <Link
                                         href={`/leads/${activity.leadId}`}
-                                        className="flex w-full min-w-0 flex-1 gap-3 hover:opacity-80 sm:w-auto"
+                                        className="flex w-full min-w-0 gap-3 hover:opacity-80 sm:w-auto sm:flex-1"
                                     >
                                         {activityContent}
                                     </Link>
