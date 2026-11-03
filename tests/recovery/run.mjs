@@ -27,6 +27,9 @@ const hash = (value) => createHash("sha256").update(value).digest("hex");
 const schema = (database) => exec(["pg_dump", "-U", "postgres", "--schema-only", "--no-owner", database]).stdout
     .split("\n").filter(line => !line.startsWith("--") && !line.startsWith("\\restrict") && !line.startsWith("\\unrestrict") && line.trim()).join("\n");
 try {
+    if (process.env.DOCKER_HOST || process.env.DOCKER_CONTEXT) throw new Error("Unset Docker host/context overrides; use the local engine only");
+    const context = JSON.parse(docker(["context", "inspect"]).stdout)[0];
+    if (!/^(unix:\/\/|npipe:\/\/)/.test(context.Endpoints?.docker?.Host ?? "")) throw new Error("Docker engine must use a local Unix socket or named pipe");
     docker(["version", "--format", "{{.Server.Version}}"]);
     container = docker(["run", "-d", "--network", "none", "--name", "autotrack-recovery-" + randomBytes(6).toString("hex"),
         "-e", "POSTGRES_PASSWORD=synthetic-disposable-only", "postgres:17"]).stdout.trim();

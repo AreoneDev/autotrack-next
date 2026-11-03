@@ -48,3 +48,6 @@ package-lock.json
 *.json
 
 /nfr-reports/
+
+# Local Supabase CLI metadata
+/supabase/.temp/

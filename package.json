@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test:nfr": "playwright test --config tests/nonfunctional/playwright.config.ts",
     "test:recovery": "node tests/recovery/run.mjs",
-    "test:dependencies": "node tests/nonfunctional/dependency-audit.mjs"
+    "test:dependencies": "node tests/nonfunctional/dependency-audit.mjs",
+    "test:supabase": "node tests/supabase/run.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

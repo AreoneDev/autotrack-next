@@ -26,15 +26,18 @@ double and synthetic accounts; they do not exercise Supabase RLS.
 The CI workflow runs on pull requests targeting `main` and on pushes to `main`.
 It installs the locked dependencies with Node.js 24, then runs ESLint, Jest and
 the production build. It can also be started manually from the Actions tab.
-The primary browser build uses a loopback HTTP double and synthetic credentials;
-CI does not connect to a hosted Supabase project. The recovery job separately
-executes committed migrations and role policies against a minimal PostgreSQL fixture.
+The primary browser build uses a loopback HTTP double and synthetic credentials.
+A separate CI job runs a disposable local Supabase stack, unmodified migrations,
+two synthetic Auth users and real repository/RLS checks without hosted secrets.
+See [the Supabase test guide](tests/supabase/README.md) for prerequisites and limits.
 
-The separate nonfunctional workflow runs bounded loopback performance/load, security and dependency checks, plus a network-isolated PostgreSQL recovery drill. See [tests/NONFUNCTIONAL.md](tests/NONFUNCTIONAL.md) for commands, budgets and evidence limits.
+The nonfunctional workflow runs bounded loopback performance/load, security and
+dependency checks, plus a network-isolated PostgreSQL backup/recovery drill.
+See [tests/NONFUNCTIONAL.md](tests/NONFUNCTIONAL.md) for commands, budgets and evidence limits.
 
-To block a merge when these checks fail, configure a branch protection rule or
-ruleset for `main` in GitHub and require `Lint, test and build` plus the three
-nonfunctional checks listed in the workflow.
+To block a merge when checks fail, configure a branch protection rule or ruleset
+for main and require Lint, test and build, Disposable Supabase integration and RLS,
+and the three nonfunctional checks listed in the workflows.
 The workflow alone does not prevent merging.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
