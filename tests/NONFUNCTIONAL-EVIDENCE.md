@@ -31,11 +31,31 @@ Local checks:
 - Windows managed-worktree path required the documented Jest --testMatch
   override. Canonical Linux CI results are recorded separately.
 - Local production-build NFR: all 5 cases passed. 1,000 leads loaded in 2,276.7 ms; filtering 639.1 ms; TTFB 19.4 ms; exactly 10 association requests. 360 HTTP samples had zero failures; phase p95 values 10.4/39.4/62.4/8.7 ms (last is recovery).
-- Dedicated Linux CI recovery and canonical existing E2E results: pending.
+- Verified source revision: 2224b86a9217f48abe36146634b8f9bb190af9e9.
+- [Canonical CI run](https://github.com/AreoneDev/autotrack-next/actions/runs/41576115701):
+  lint/typecheck passed, 31 suites / 296 Jest tests passed, production build and
+  52 E2E cases passed across Chromium, Firefox, WebKit and mobile Chromium.
+- [Nonfunctional CI run](https://github.com/AreoneDev/autotrack-next/actions/runs/41576115725):
+  all three jobs passed. Linux browser: 5 cases passed; 1,000 leads loaded in
+  1,342.1 ms, filtering 341.7 ms, TTFB 6.6 ms, exactly 10 association queries.
+  HTTP phase p95: 6.7/22.6/30.0/5.9 ms; all 360 responses correct, zero failures.
+- Real isolated recovery: PostgreSQL 17.11; backup 103.1 ms; restore plus data,
+  schema and behavior verification 609.8 ms (budget 60,000 ms). Snapshot-relative
+  RPO zero; post-backup row absent; truncated archive rejected; container removed.
+  Schema/content/sequence comparison and restored RLS/grants/revision/delete
+  behavior all passed.
+- CI dependency audit: production 0; all dependencies 0 high/critical,
+  32 moderate / 3 low. Committed Linux lock SHA-256:
+  eec53f82fc1e1f1341f51296146a1f662af13bd2a064427491d31cf51efa1092.
+- Retained raw reports:
+  [browser](https://github.com/AreoneDev/autotrack-next/actions/runs/41576115725/artifacts/13203563241),
+  [audit](https://github.com/AreoneDev/autotrack-next/actions/runs/41576115725/artifacts/13203752344),
+  [recovery](https://github.com/AreoneDev/autotrack-next/actions/runs/41576115725/artifacts/13203013584).
+  Artifacts expire after 14 days; job logs and this summary retain the key results.
 
 Environment limitations:
-- Local Docker/PostgreSQL tooling is unavailable. Actual recovery must execute
-  in the dedicated disposable Linux CI Docker job before it is called verified.
+- Local Docker/PostgreSQL tooling is unavailable. The recovery evidence above
+  comes from the dedicated disposable Linux CI Docker job.
 - C: disk filled during an initial install. Only this task's generated
   node_modules/.next were removed/rebuilt; npm download cache moved to
   D:/codex-nfr-cache. No other checkout's files or branches were changed.
@@ -43,6 +63,11 @@ Environment limitations:
   load was used.
 
 Merge/deployment:
-- Do not automatically merge while known dependency issues remain.
+- [PR #4](https://github.com/AreoneDev/autotrack-next/pull/4) is open and unmerged.
+- Do not automatically merge while known dependency issues remain. Root remaining
+  advisories involve minimatch (GHSA-g3hv-75wg-m249), glob (GHSA-3g3m-2fjr-6pw4)
+  and deepmerge (GHSA-gcqx-w48m-w2h4), propagated through the development tools.
+  Remediation needs a reviewed toolchain upgrade; incompatible overrides and the
+  force-audit downgrade suggestions were not applied.
 - A deployment cannot be claimed from a passing build alone; verify a deployment
   associated with the actual merged commit if this PR is later approved to merge.

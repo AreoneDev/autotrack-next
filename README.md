@@ -32,7 +32,8 @@ Supabase project or verify database migrations and row-level security policies.
 The separate nonfunctional workflow runs bounded loopback performance/load, security and dependency checks, plus a network-isolated PostgreSQL recovery drill. See [tests/NONFUNCTIONAL.md](tests/NONFUNCTIONAL.md) for commands, budgets and evidence limits.
 
 To block a merge when these checks fail, configure a branch protection rule or
-ruleset for `main` in GitHub and require the `Lint, test and build` status check.
+ruleset for `main` in GitHub and require `Lint, test and build` plus the three
+nonfunctional checks listed in the workflow.
 The workflow alone does not prevent merging.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
