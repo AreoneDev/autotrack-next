@@ -68,7 +68,11 @@ test("A11Y-02: key pages, skip link, collapsed navigation and notification discl
     await createLead(page);
     await createTask(page);
     for (const path of ["/leads", "/dashboard", "/agenda", "/analytics"]) {
-        await page.goto(path);
+        const name = path.slice(1, 2).toUpperCase() + path.slice(2);
+        // Use the application's client navigation so a pending task refresh
+        // cannot race a hard document navigation in Firefox.
+        await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name, exact: true }).click();
+        await expect(page).toHaveURL(path);
         await expect(page.getByRole("main")).toHaveCount(1);
         await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
         await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: path.slice(1, 2).toUpperCase() + path.slice(2), exact: true })).toHaveAttribute("aria-current", "page");
