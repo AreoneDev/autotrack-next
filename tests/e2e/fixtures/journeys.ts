@@ -63,5 +63,4 @@ export async function refreshed(page: Page, action: () => Promise<unknown>) {
         action(),
     ]);
     expect(response.ok()).toBe(true);
-    await response.finished();
 }
