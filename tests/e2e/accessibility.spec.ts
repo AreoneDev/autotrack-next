@@ -1,3 +1,4 @@
+import { refreshed } from "./fixtures/journeys";
 import { backendURL } from "./fixtures/endpoints";
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -25,7 +26,7 @@ async function createLead(page: Page) {
     await page.getByRole("button", { name: "Create new lead" }).click();
     await page.getByLabel("First Name", { exact: true }).fill("A11y");
     await page.getByLabel("Last Name", { exact: true }).fill("Customer");
-    await page.getByRole("button", { name: "Create Lead", exact: true }).click();
+    await refreshed(page, () => page.getByRole("button", { name: "Create Lead", exact: true }).click());
     await expect(page.getByRole("link", { name: "A11y Customer", exact: true })).toBeVisible();
 }
 
@@ -33,7 +34,7 @@ async function createTask(page: Page) {
     await page.getByRole("link", { name: "A11y Customer", exact: true }).click();
     await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
     await page.getByLabel("New task notes", { exact: true }).fill("Synthetic accessibility task");
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await refreshed(page, () => page.getByRole("button", { name: "Add", exact: true }).click());
     await expect(page.getByRole("button", { name: "Edit task Follow-up", exact: true })).toBeVisible();
 }
 
@@ -139,7 +140,7 @@ test("A11Y-04: lead details, edit controls, keyboard autocomplete and safe delet
     await expect(page.getByRole("button", { name: "Modify", exact: true })).toBeVisible();
     await scan(page, info, "lead-detail");
     await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await refreshed(page, () => page.getByRole("button", { name: "Add", exact: true }).click());
     await page.getByRole("button", { name: "Edit task Follow-up", exact: true }).click();
     await expect(page.getByLabel("Task title", { exact: true })).toBeVisible();
     await scan(page, info, "task-edit");
