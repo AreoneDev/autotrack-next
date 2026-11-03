@@ -29,6 +29,8 @@ the production build. It can also be started manually from the Actions tab.
 The build uses placeholder public Supabase values; CI does not connect to a real
 Supabase project or verify database migrations and row-level security policies.
 
+The separate nonfunctional workflow runs bounded loopback performance/load, security and dependency checks, plus a network-isolated PostgreSQL recovery drill. See [tests/NONFUNCTIONAL.md](tests/NONFUNCTIONAL.md) for commands, budgets and evidence limits.
+
 To block a merge when these checks fail, configure a branch protection rule or
 ruleset for `main` in GitHub and require the `Lint, test and build` status check.
 The workflow alone does not prevent merging.

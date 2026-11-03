@@ -2,6 +2,9 @@ import { createServer } from "node:http";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
+const backendPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT ?? 54329);
+if (![54329, 54339].includes(backendPort)) throw new Error("Unsupported isolated test port");
+const appPort = backendPort === 54339 ? 3200 : 3100;
 const user = {
     id: "11111111-1111-4111-8111-111111111111", aud: "authenticated", role: "authenticated",
     email: "ada@example.test", email_confirmed_at: "2026-01-01T00:00:00Z",
@@ -33,6 +36,7 @@ function filterRows(rows, search) {
         const dot = filter.indexOf(".");
         const operation = filter.slice(0, dot);
         const value = filter.slice(dot + 1);
+        if (operation === "in") return value.slice(1, -1).split(",").includes(String(row[column]));
         if (operation === "eq") return String(row[column]) === value;
         if (operation === "neq") return String(row[column]) !== value;
         if (operation === "gte") return String(row[column]) >= value;
@@ -42,7 +46,7 @@ function filterRows(rows, search) {
 }
 
 const server = createServer(async (request, response) => {
-    response.setHeader("Access-Control-Allow-Origin", "http://127.0.0.1:3100");
+    response.setHeader("Access-Control-Allow-Origin", `http://127.0.0.1:${appPort}`);
     response.setHeader("Access-Control-Allow-Headers", "*");
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     response.setHeader("Content-Type", "application/json");
@@ -75,6 +79,9 @@ const server = createServer(async (request, response) => {
         if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
         let selected = filterRows(tables[table], url.searchParams);
         if (request.method === "GET") {
+            if (url.searchParams.get("select")?.includes("vehicles(*)")) {
+                selected = selected.map(row => ({ ...row, vehicles: tables.vehicles.find(vehicle => vehicle.vehicle_id === row.vehicle_id) ?? null }));
+            }
             const ordering = url.searchParams.get("order");
             if (ordering) {
                 const [column, direction] = ordering.split(".");
@@ -103,4 +110,4 @@ const server = createServer(async (request, response) => {
         return send(500, { message: error.message });
     }
 });
-server.listen(54329, "127.0.0.1");
+server.listen(backendPort, "127.0.0.1");
