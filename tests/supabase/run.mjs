@@ -24,7 +24,7 @@ function run(command, args, options = {}) {
     if (result.error) throw new Error(command + ": " + result.error.message);
     if (result.status !== 0) {
         // Status JSON contains local secrets; never include captured stdout.
-        throw new Error(command + " exited " + result.status);
+        throw new Error(command + " " + args[0] + " exited " + result.status + (result.stderr ? ": " + result.stderr.trim() : ""));
     }
     return result.stdout;
 }
@@ -41,7 +41,7 @@ try {
     scratch = mkdtempSync(join(tmpdir(), "autotrack-supabase-"));
     project = "autotrack-security-" + randomUUID().slice(0, 8);
     const local = (args, options) => run(cli, [...args, "--workdir", scratch], options);
-    if (local(["--version"], { capture: true }).trim() !== "2.75.0") throw new Error("Supabase CLI 2.75.0 is required.");
+    if (run(cli, ["--version"], { capture: true }).trim() !== "2.75.0") throw new Error("Supabase CLI 2.75.0 is required.");
     local(["init", "--yes"]);
     const configPath = join(scratch, "supabase/config.toml");
     let config = readFileSync(configPath, "utf8");
