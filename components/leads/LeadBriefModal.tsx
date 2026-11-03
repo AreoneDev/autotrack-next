@@ -1,3 +1,4 @@
+import Modal from "@/components/ui/Modal";
 import { X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
@@ -13,10 +14,9 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+        <Modal labelledBy="lead-brief-title" onClose={onClose} className="w-full max-w-lg">
                 <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900">
+                    <h2 id="lead-brief-title" className="text-xl font-bold text-gray-900">
                         Lead Brief
                     </h2>
 
@@ -45,7 +45,6 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
                     </p>
                     <p><strong>Notes:</strong> {lead.notes || "No notes"}</p>
                 </div>
-            </div>
-        </div>
+        </Modal>
     );
 }

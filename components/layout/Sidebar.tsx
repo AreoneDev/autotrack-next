@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import {
     BarChart3,
     CalendarDays,
@@ -37,6 +38,7 @@ const navItems = [
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
+    const pathname = usePathname();
 
     return (
         <aside
@@ -59,9 +61,9 @@ export default function Sidebar() {
 
                     {!collapsed ? (
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900">
+                            <p className="text-xl font-bold text-gray-900">
                                 AutoTrack
-                            </h1>
+                            </p>
                             <p className="text-xs text-gray-500">
                                 CRM
                             </p>
@@ -72,13 +74,15 @@ export default function Sidebar() {
                 <button
                     onClick={() => setCollapsed(!collapsed)}
                     className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+                    aria-expanded={!collapsed}
+                    aria-controls="primary-navigation"
                     aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </button>
             </div>
 
-            <nav className="mt-6 flex flex-col gap-2 px-4">
+            <nav id="primary-navigation" aria-label="Primary" className="mt-6 flex flex-col gap-2 px-4">
                 {navItems.map((item) => {
                     const Icon = item.icon;
 
@@ -86,10 +90,12 @@ export default function Sidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            aria-label={item.label}
+                            aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined}
                             prefetch={false}
                             className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                         >
-                            <Icon size={20} />
+                            <Icon size={20} aria-hidden="true" />
 
                             {!collapsed && (
                                 <span className="font-medium">

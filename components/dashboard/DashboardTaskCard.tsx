@@ -152,7 +152,7 @@ export default function DashboardTaskCard({ task }: DashboardTaskCardProps) {
                     {task.leadName}
                 </p>
                 {errorMessage ? (
-                    <p className="mt-2 text-xs font-medium text-red-600">
+                    <p role="alert" className="mt-2 text-xs font-medium text-red-600">
                         {errorMessage}
                     </p>
                 ) : null}
@@ -186,11 +186,7 @@ export default function DashboardTaskCard({ task }: DashboardTaskCardProps) {
                 }}
                 disabled={updating}
                 className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${tone.button}`}
-                aria-label={
-                    completed
-                        ? `Mark ${task.title} as uncompleted`
-                        : `Mark ${task.title} as completed`
-                }
+                aria-label={`${completed ? "Completed" : "Complete"}: ${task.title}. Mark as ${completed ? "uncompleted" : "completed"}`}
             >
                 {updating ? (
                     <Loader2 className="animate-spin" size={15} />

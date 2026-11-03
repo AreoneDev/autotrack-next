@@ -24,8 +24,8 @@ const config: Config = {
     },
 
     testMatch: [
-        "<rootDir>/tests/**/*.test.ts",
-        "<rootDir>/tests/**/*.test.tsx",
+        "**/tests/**/*.test.ts",
+        "**/tests/**/*.test.tsx",
     ],
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Props = {
@@ -17,6 +18,7 @@ export default function AgendaCalendar({
     pastUnfinishedTaskCounts,
     todayDateString,
 }: Props) {
+    const calendar = useRef<HTMLElement>(null);
     const year = selectedDate.getFullYear();
     const month = selectedDate.getMonth();
 
@@ -55,7 +57,7 @@ export default function AgendaCalendar({
     }
 
     return (
-        <section className="w-full rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <section ref={calendar} aria-label="Calendar" className="w-full rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
                 <button
                     onClick={() => changeMonth(-1)}
@@ -99,23 +101,33 @@ export default function AgendaCalendar({
                           ? pastCount
                           : 0;
                     const badgeColor = active
-                        ? "bg-green-600"
+                        ? "bg-green-700"
                         : "bg-red-600";
 
                     return (
                         <button
                             key={date.toISOString()}
-                            aria-label={dateKey}
+                            data-date={dateKey}
                             aria-pressed={active}
+                            tabIndex={active ? 0 : -1}
+                            onKeyDown={(event) => {
+                                const offsets: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+                                if (!(event.key in offsets)) return;
+                                event.preventDefault();
+                                const next = new Date(date);
+                                next.setDate(next.getDate() + offsets[event.key]);
+                                onSelectDate(next);
+                                requestAnimationFrame(() => calendar.current?.querySelector<HTMLButtonElement>(`[data-date="${formatDateKey(next)}"]`)?.focus());
+                            }}
                             onClick={() => onSelectDate(date)}
                             className={`min-h-[66px] border-b border-r p-2 text-left hover:bg-blue-50 ${
                                 active ? "bg-blue-100" : ""
-                            } ${muted ? "text-slate-300" : "text-slate-700"}`}
+                            } ${muted ? "text-slate-500" : "text-slate-700"}`}
                         >
-                            <div className="font-medium">{date.getDate()}</div>
+                            <div className="font-medium">{date.getDate()}<span className="sr-only"> {date.toLocaleDateString("en-CA", { month: "long", year: "numeric" })}</span></div>
 
                             {badgeCount > 0 && (
-                                <div
+                                <div id={`tasks-${dateKey}`}
                                     className={`mt-2 rounded-md px-2 py-1 text-xs text-white ${badgeColor}`}
                                 >
                                     {badgeCount} undone

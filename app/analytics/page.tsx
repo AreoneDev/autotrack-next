@@ -242,7 +242,7 @@ function LineChartCard({
                     <text
                         x="12"
                         y="35"
-                        className="fill-slate-500 text-[11px]"
+                        className="fill-slate-600 text-[11px]"
                     >
                         {maxValue}
                         {valueSuffix}
@@ -250,7 +250,7 @@ function LineChartCard({
                     <text
                         x="20"
                         y="193"
-                        className="fill-slate-500 text-[11px]"
+                        className="fill-slate-600 text-[11px]"
                     >
                         0
                     </text>
@@ -281,7 +281,7 @@ function LineChartCard({
                                 x={point.x}
                                 y="210"
                                 textAnchor="middle"
-                                className="fill-slate-500 text-[10px]"
+                                className="fill-slate-600 text-[10px]"
                             >
                                 {data[index].period}
                             </text>
@@ -289,6 +289,16 @@ function LineChartCard({
                     ))}
                 </svg>
             </div>
+            <table className="sr-only">
+                <caption>{title} data</caption>
+                <thead><tr><th scope="col">Period</th><th scope="col">Value</th></tr></thead>
+                <tbody>{data.map((point) => (
+                    <tr key={point.period}>
+                        <th scope="row">{point.period}</th>
+                        <td>{point.value}{valueSuffix}</td>
+                    </tr>
+                ))}</tbody>
+            </table>
         </div>
     );
 }
@@ -336,7 +346,7 @@ export default async function AnalyticsPage() {
     ] = sectionConfig;
 
     return (
-        <main className="space-y-6 text-slate-900">
+        <div className="space-y-6 text-slate-900">
             <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <SectionHeader {...trendsConfig} />
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -464,6 +474,6 @@ export default async function AnalyticsPage() {
                     </p>
                 </div>
             </section>
-        </main>
+        </div>
     );
 }

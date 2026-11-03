@@ -1,5 +1,7 @@
 "use client";
 
+import Modal from "@/components/ui/Modal";
+
 import { useMemo, useState } from "react";
 import { localDateInput } from "@/lib/date";
 import type { ComponentType } from "react";
@@ -756,7 +758,7 @@ export default function LeadDetailPanel({
     return (
         <div className="space-y-6">
             {errorMessage ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     {errorMessage}
                 </div>
             ) : null}
@@ -1016,7 +1018,7 @@ export default function LeadDetailPanel({
                                 min={0}
                                 value={draftLead.score}
                                 readOnly
-                                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-500"
+                                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-700"
                             />
                             <span className="mt-1 block text-xs text-slate-500">
                                 Score recalculates automatically when saved.
@@ -1033,13 +1035,14 @@ export default function LeadDetailPanel({
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
                         </label>
-                        <div className="md:col-span-2">
+                        <div role="group" aria-label="Vehicle Interest" className="md:col-span-2">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-medium text-slate-700">
                                     Vehicle Interest
                                 </p>
                                 <button
                                     type="button"
+                                    aria-label="Clear vehicle interest"
                                     onClick={() =>
                                         setDraftVehicleInterest(
                                             getEmptyVehicleSelection()
@@ -1063,13 +1066,14 @@ export default function LeadDetailPanel({
                                 />
                             </div>
                         </div>
-                        <div className="md:col-span-2">
+                        <div role="group" aria-label="Trade-in Vehicle" className="md:col-span-2">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-medium text-slate-700">
                                     Trade-in Vehicle
                                 </p>
                                 <button
                                     type="button"
+                                    aria-label="Clear trade-in vehicle"
                                     onClick={() =>
                                         setDraftTradeInVehicle(
                                             getEmptyVehicleSelection()
@@ -1298,6 +1302,7 @@ export default function LeadDetailPanel({
                                 <div className="mt-3 space-y-3">
                                     <div className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_150px_120px_auto]">
                                         <select
+                                            aria-label="Task type"
                                             value={newTaskType}
                                             onChange={(event) =>
                                                 setNewTaskType(event.target.value)
@@ -1319,6 +1324,7 @@ export default function LeadDetailPanel({
                                             )}
                                         </select>
                                         <input
+                                            aria-label="Task date"
                                             type="date"
                                             value={newTaskDate}
                                             onChange={(event) =>
@@ -1327,6 +1333,7 @@ export default function LeadDetailPanel({
                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                         />
                                         <input
+                                            aria-label="Task time"
                                             type="time"
                                             value={newTaskTime}
                                             onChange={(event) =>
@@ -1344,6 +1351,7 @@ export default function LeadDetailPanel({
                                         </button>
                                     </div>
                                     <input
+                                        aria-label="Task notes"
                                         value={newTaskNotes}
                                         onChange={(event) =>
                                             setNewTaskNotes(event.target.value)
@@ -1369,6 +1377,7 @@ export default function LeadDetailPanel({
                                             {isTaskEditing ? (
                                                 <div className="space-y-3">
                                                     <input
+                                                        aria-label="Edit task title"
                                                         value={draftTaskTitle}
                                                         onChange={(event) =>
                                                             setDraftTaskTitle(
@@ -1378,6 +1387,7 @@ export default function LeadDetailPanel({
                                                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                     />
                                                     <input
+                                                        aria-label="Edit task notes"
                                                         value={draftTaskNotes}
                                                         onChange={(event) =>
                                                             setDraftTaskNotes(
@@ -1389,6 +1399,7 @@ export default function LeadDetailPanel({
                                                     />
                                                     <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
                                                         <input
+                                                            aria-label="Edit task date"
                                                             type="date"
                                                             value={draftTaskDate}
                                                             onChange={(event) =>
@@ -1399,6 +1410,7 @@ export default function LeadDetailPanel({
                                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                         />
                                                         <input
+                                                            aria-label="Edit task time"
                                                             type="time"
                                                             value={draftTaskTime}
                                                             onChange={(event) =>
@@ -1482,6 +1494,7 @@ export default function LeadDetailPanel({
                                                             disabled={isTaskUpdating}
                                                             className="text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-slate-300"
                                                             title="Edit task"
+                                                            aria-label={`Edit task ${task.title}`}
                                                         >
                                                             <Pencil size={17} />
                                                         </button>
@@ -1494,6 +1507,7 @@ export default function LeadDetailPanel({
                                                             disabled={isTaskUpdating}
                                                             className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-300"
                                                             title="Delete task"
+                                                            aria-label={`Delete task ${task.title}`}
                                                         >
                                                             <Trash2 size={17} />
                                                         </button>
@@ -1505,7 +1519,7 @@ export default function LeadDetailPanel({
                                 })}
 
                                 {leadTasks.length === 0 ? (
-                                    <p className="text-sm text-slate-400">
+                                    <p className="text-sm text-slate-500">
                                         No tasks for this lead.
                                     </p>
                                 ) : null}
@@ -1539,7 +1553,7 @@ export default function LeadDetailPanel({
                             ))}
 
                             {leadNotifications.length === 0 ? (
-                                <p className="text-sm text-slate-400">
+                                <p className="text-sm text-slate-500">
                                     No notifications for this lead.
                                 </p>
                             ) : null}
@@ -1549,9 +1563,8 @@ export default function LeadDetailPanel({
             ) : null}
 
             {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                        <h3 className="text-xl font-bold text-slate-950">
+                <Modal labelledBy="delete-lead-title" onClose={() => { if (!deleting) setShowDeleteConfirm(false); }} className="w-full max-w-md">
+                        <h3 id="delete-lead-title" className="text-xl font-bold text-slate-950">
                             Delete this lead?
                         </h3>
                         <p className="mt-2 text-sm text-slate-600">
@@ -1574,8 +1587,7 @@ export default function LeadDetailPanel({
                                 {deleting ? "Deleting..." : "Delete Lead"}
                             </button>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

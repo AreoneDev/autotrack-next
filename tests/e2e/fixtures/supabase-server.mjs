@@ -2,6 +2,9 @@ import { createServer } from "node:http";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
+const appPort = Number(process.env.E2E_APP_PORT ?? 3100);
+const backendPort = Number(process.env.E2E_BACKEND_PORT ?? 54329);
+if (![appPort, backendPort].every((port) => Number.isInteger(port) && port >= 1024 && port <= 65535)) throw new Error("Invalid E2E port");
 const user = {
     id: "11111111-1111-4111-8111-111111111111", aud: "authenticated", role: "authenticated",
     email: "ada@example.test", email_confirmed_at: "2026-01-01T00:00:00Z",
@@ -42,13 +45,13 @@ function filterRows(rows, search) {
 }
 
 const server = createServer(async (request, response) => {
-    response.setHeader("Access-Control-Allow-Origin", "http://127.0.0.1:3100");
+    response.setHeader("Access-Control-Allow-Origin", `http://127.0.0.1:${appPort}`);
     response.setHeader("Access-Control-Allow-Headers", "*");
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     response.setHeader("Content-Type", "application/json");
     const send = (status, data) => { response.writeHead(status); response.end(JSON.stringify(data)); };
     if (request.method === "OPTIONS") return send(200, {});
-    const url = new URL(request.url, "http://127.0.0.1:54329");
+    const url = new URL(request.url, `http://127.0.0.1:${backendPort}`);
     try {
         if (url.pathname === "/health") return send(200, { ready: true });
         if (url.pathname === "/__test__/reset" && request.method === "POST") { reset(); return send(200, {}); }
@@ -103,4 +106,4 @@ const server = createServer(async (request, response) => {
         return send(500, { message: error.message });
     }
 });
-server.listen(54329, "127.0.0.1");
+server.listen(backendPort, "127.0.0.1");

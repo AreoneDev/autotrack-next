@@ -13,6 +13,7 @@ The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https
 | Lead search, filtering, creation, status rollback and deletion | Partitions, boundaries, transitions | UI-LEAD, E2E-LEAD |
 | Task completion and vehicle form | Transitions, negative cases | UI-TASK, UI-VEH |
 | Calendar month lengths, leap years, six-week months | Boundaries | UI-CAL |
+| Keyboard focus, modal boundaries, announcements, names, contrast, navigation and key page states | State transitions, boundary values, representative state partitions | A11Y-01–05, A11Y-AC-01; `tests/e2e/accessibility.spec.ts`, `tests/ui/Autocomplete.test.tsx` |
 
 Fixtures contain synthetic data. Unit, integration and React tests are deterministic and never require Supabase credentials. `tests/integration/persistence/real/` exercises real adapter code with a scripted client double: it does not execute SQL or prove row-level security. Playwright builds the application against a loopback-only, resettable HTTP double on ports 3100 and 54329. Do not reuse those ports for a real service during the run. The double implements only the paths needed by these tests; it is not a Supabase emulator. Browser tests run serially so their resets do not race. The suite covers Chromium, Firefox, WebKit and a mobile Chromium viewport.
 
@@ -24,10 +25,15 @@ npm run test:ui
 npm run test:coverage
 npx playwright install chromium firefox webkit
 npm run test:e2e
+# Accessibility subset (also included in test:e2e and CI)
+npm run test:a11y
 npm run typecheck
 npm run lint
 ```
 
 Coverage reports are in `coverage/`; the denominator deliberately includes untested components and production repositories so gaps remain visible. Playwright HTML reports and failed traces/screenshots are in `playwright-report/` and `test-results/`. Coverage measures execution, not the adequacy of assertions. Case IDs label test intent, not requirements approved by a product owner.
 
-Remaining high-priority work: run migrations and `supabase/verification/20261031_per_user_data_access.sql` against a disposable database with two independent users, and test real RLS and email callbacks; add lead-detail editing, dashboard and agenda journeys; add keyboard/screen-reader accessibility, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.
+Remaining high-priority work: run migrations and `supabase/verification/20261031_per_user_data_access.sql` against a disposable database with two independent users, and test real RLS and email callbacks; add lead-detail editing, dashboard and agenda journeys; extend manual screen-reader and zoom/reflow testing, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.
+
+Accessibility behavior, scan scope and remaining manual checks are described in [ACCESSIBILITY.md](ACCESSIBILITY.md).
+For simultaneous worktrees, set `E2E_APP_PORT` and `E2E_BACKEND_PORT` to unused ports (for example 3112 and 54341). Only the port numbers are configurable; both services remain on `127.0.0.1`, and Playwright refuses to reuse an existing server.

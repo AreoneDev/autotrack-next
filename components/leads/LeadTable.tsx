@@ -1,18 +1,19 @@
 "use client";
 
 import {
-    type FocusEvent,
     type FormEvent,
     type PointerEvent,
     useMemo,
     useRef,
     useState,
 } from "react";
-import { ChevronDown, Plus, X } from "lucide-react";
+import Autocomplete from "@/components/ui/Autocomplete";
+import { Plus, X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
 import { localDateInput } from "@/lib/date";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
+import Modal from "@/components/ui/Modal";
 import LeadTableRow from "./LeadTableRow";
 import LeadBriefModal from "./LeadBriefModal";
 
@@ -76,70 +77,9 @@ function SearchableVehicleFilter({
     onChange: (value: string) => void;
     matchesOption?: (option: string, value: string) => boolean;
 }) {
-    const [open, setOpen] = useState(false);
-    const filteredOptions = options.filter((option) =>
-        matchesOption(option, value)
-    );
-
-    function handleBlur(event: FocusEvent<HTMLDivElement>) {
-        if (event.currentTarget.contains(event.relatedTarget)) {
-            return;
-        }
-
-        setOpen(false);
-    }
-
-    return (
-        <div className="relative" onBlur={handleBlur}>
-            <div className="relative">
-                <input
-                    type="text"
-                    value={value}
-                    onFocus={() => setOpen(true)}
-                    onChange={(event) => {
-                        onChange(event.target.value);
-                        setOpen(true);
-                    }}
-                    placeholder={placeholder}
-                    className="w-full rounded-lg border px-4 py-3 pr-10 text-gray-900"
-                />
-                <button
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => setOpen((currentOpen) => !currentOpen)}
-                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500 hover:text-slate-800"
-                    aria-label={`Show ${placeholder.toLowerCase()} options`}
-                >
-                    <ChevronDown size={18} />
-                </button>
-            </div>
-
-            {open ? (
-                <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                    {filteredOptions.length > 0 ? (
-                        filteredOptions.map((option) => (
-                            <button
-                                key={option}
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => {
-                                    onChange(option);
-                                    setOpen(false);
-                                }}
-                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                                {option}
-                            </button>
-                        ))
-                    ) : (
-                        <div className="px-3 py-2 text-sm text-slate-500">
-                            No matching options
-                        </div>
-                    )}
-                </div>
-            ) : null}
-        </div>
-    );
+    return <Autocomplete label={`Filter by vehicle ${placeholder.replace("Any ", "")}`} value={value}
+        options={options.filter((option) => matchesOption(option, value))}
+        placeholder={placeholder} onChange={onChange} onSelect={onChange} />;
 }
 
 export default function LeadTable({ leads }: LeadTableProps) {
@@ -600,6 +540,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                         </h3>
                         <input
                             type="text"
+                            aria-label="Search leads"
                             placeholder="Search by customer name, email, or phone"
                             value={searchText}
                             onChange={(event) =>
@@ -720,7 +661,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     </section>
                 </div>
 
-                <div className="mt-6 text-sm">
+                <div role="status" className="mt-6 text-sm">
                     <p className="text-slate-600">
                         Showing{" "}
                         <span className="font-semibold text-slate-950">
@@ -737,7 +678,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
             <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
                 {deleteError ? (
-                    <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {deleteError}
                     </div>
                 ) : null}
@@ -818,11 +759,10 @@ export default function LeadTable({ leads }: LeadTableProps) {
             </button>
 
             {createOpen ? (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
+                <Modal labelledBy="create-lead-title" onClose={() => setCreateOpen(false)} className="w-full max-w-2xl">
                         <div className="mb-5 flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">
+                                <h2 id="create-lead-title" className="text-xl font-bold text-gray-900">
                                     Create Lead
                                 </h2>
                                 <p className="text-sm text-gray-500">
@@ -945,7 +885,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             </label>
 
                             {createError ? (
-                                <p className="text-sm font-medium text-red-600">
+                                <p role="alert" className="text-sm font-medium text-red-600">
                                     {createError}
                                 </p>
                             ) : null}
@@ -968,8 +908,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             ) : null}
         </div>
     );
