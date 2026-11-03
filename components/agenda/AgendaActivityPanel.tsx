@@ -162,7 +162,7 @@ export default function AgendaActivityPanel({
                         return (
                             <article
                                 key={`${activity.type}-${activity.id}`}
-                                className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition ${
+                                className={`flex w-full flex-col items-start justify-between gap-4 rounded-lg border p-4 text-left transition sm:flex-row ${
                                     isTask
                                         ? taskStyles?.card
                                         : "border-slate-200 bg-white"
@@ -171,7 +171,7 @@ export default function AgendaActivityPanel({
                                 {activity.leadId ? (
                                     <Link
                                         href={`/leads/${activity.leadId}`}
-                                        className="flex min-w-0 flex-1 gap-3 hover:opacity-80"
+                                        className="flex w-full min-w-0 flex-1 gap-3 hover:opacity-80 sm:w-auto"
                                     >
                                         {activityContent}
                                     </Link>
