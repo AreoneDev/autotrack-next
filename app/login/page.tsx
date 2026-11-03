@@ -119,9 +119,10 @@ export default function LoginPage() {
                 </p>
 
                 <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
-                    <button className={`rounded-lg px-3 py-2 ${mode === "password" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} disabled={!isReady} onClick={() => selectMode("password")} type="button">Password</button>
-                    <button className={`rounded-lg px-3 py-2 ${mode === "code" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} disabled={!isReady} onClick={() => selectMode("code")} type="button">Email link</button>
-                    <button className={`rounded-lg px-3 py-2 ${mode === "register" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} disabled={!isReady} onClick={() => selectMode("register")} type="button">Register</button>
+                    <button className={`rounded-lg px-3 py-2 ${mode === "password" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "password"} disabled={!isReady} onClick={() => selectMode("password")} type="button">Password</button>
+                    <button className={`rounded-lg px-3 py-2 ${mode === "code" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "code"} disabled={!isReady} onClick={() => selectMode("code")} type="button">Email link</button>
+                    <button className={`rounded-lg px-3 py-2 ${mode === "register" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "register"} disabled={!isReady} onClick={() => selectMode("register")} type="button">Register</button>
+
                 </div>
 
                 <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -136,8 +137,8 @@ export default function LoginPage() {
                         </label>
                     ) : null}
 
-                    {error ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-                    {message ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p> : null}
+                    {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+                    {message ? <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p> : null}
 
                     <button className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-60" disabled={!isReady || isSubmitting} type="submit">
                         {isSubmitting ? "Please wait…" : mode === "code" ? "Send sign-in link" : mode === "register" ? "Create account" : "Sign in"}

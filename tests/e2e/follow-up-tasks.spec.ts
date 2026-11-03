@@ -25,7 +25,7 @@ test("E2E-TASK-01: validate, create, edit, complete, reopen and delete with fail
         title: "Follow-up", completed: false, task_date: `${day(2)}T14:45:00`,
     })]);
 
-    await page.getByRole("button", { name: "Edit task", exact: true }).click();
+    await page.getByRole("button", { name: /^Edit task / }).click();
     await page.getByLabel("Task title", { exact: true }).fill(" ");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Task title is required.", { exact: true })).toBeVisible();
@@ -40,7 +40,7 @@ test("E2E-TASK-01: validate, create, edit, complete, reopen and delete with fail
     await refreshed(page, () => page.getByRole("button", { name: "Save", exact: true }).click());
     await expect(page.getByText("Confirm quotation", { exact: true })).toBeVisible();
     await page.reload();
-    await page.getByRole("button", { name: "Edit task", exact: true }).click();
+    await page.getByRole("button", { name: /^Edit task / }).click();
     await expect(page.getByLabel("Task title", { exact: true })).toHaveValue("Confirm quotation");
     await expect(page.getByLabel("Task notes", { exact: true })).toHaveValue("Bring updated pricing.");
     await expect(page.getByLabel("Task date", { exact: true })).toHaveValue(day(3));
@@ -61,10 +61,10 @@ test("E2E-TASK-01: validate, create, edit, complete, reopen and delete with fail
     await expect(page.getByRole("button", { name: "Uncompleted", exact: true })).toBeVisible();
 
     await failNext(request, "tasks", "DELETE");
-    await page.getByRole("button", { name: "Delete task", exact: true }).click();
+    await page.getByRole("button", { name: /^Delete task / }).click();
     await expect(page.getByText("Synthetic write failure", { exact: true })).toBeVisible();
     expect((await state(request)).tasks).toHaveLength(1);
-    await refreshed(page, () => page.getByRole("button", { name: "Delete task", exact: true }).click());
+    await refreshed(page, () => page.getByRole("button", { name: /^Delete task / }).click());
     await expect(page.getByText("No tasks for this lead.", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByText("Confirm quotation", { exact: true })).toHaveCount(0);

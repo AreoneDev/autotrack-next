@@ -336,10 +336,12 @@ export default function AgendaPage() {
     }
 
     return (
-        <main className="flex min-w-80 flex-col gap-6 pb-6">
+        <div className="flex min-w-80 flex-col gap-6 pb-6">
+
             <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                     <button
+                        aria-label="Previous day"
                         onClick={() => changeDate(-1)}
                         className="rounded-lg border border-slate-200 p-2 hover:bg-slate-100"
                     >
@@ -357,6 +359,7 @@ export default function AgendaPage() {
                     />
 
                     <button
+                        aria-label="Next day"
                         onClick={() => changeDate(1)}
                         className="rounded-lg border border-slate-200 p-2 hover:bg-slate-100"
                     >
@@ -395,10 +398,11 @@ export default function AgendaPage() {
                 >
                     <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr_0.75fr_0.65fr_auto]">
                         <div className="relative">
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <label htmlFor="agenda-lead" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Lead
                             </label>
                             <input
+                                id="agenda-lead"
                                 type="search"
                                 aria-label="Lead"
                                 value={leadSearchText}
@@ -444,11 +448,13 @@ export default function AgendaPage() {
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <label htmlFor="agenda-task-type" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Task Type
                             </label>
                             <select
+                                id="agenda-task-type"
                                 aria-label="Task type"
+
                                 value={newTaskType}
                                 onChange={(e) => {
                                     setNewTaskType(e.target.value);
@@ -468,10 +474,11 @@ export default function AgendaPage() {
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <label htmlFor="agenda-task-date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Date
                             </label>
                             <input
+                                id="agenda-task-date"
                                 type="date"
                                 aria-label="Task date"
                                 value={newTaskDate}
@@ -481,10 +488,11 @@ export default function AgendaPage() {
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <label htmlFor="agenda-task-time" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Time
                             </label>
                             <input
+                                id="agenda-task-time"
                                 type="time"
                                 aria-label="Task time"
                                 value={newTaskTime}
@@ -505,10 +513,11 @@ export default function AgendaPage() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <label htmlFor="agenda-task-notes" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Short Description / Notes
                         </label>
                         <input
+                            id="agenda-task-notes"
                             type="text"
                             value={newTaskNotes}
                             onChange={(e) => {
@@ -555,6 +564,6 @@ export default function AgendaPage() {
                 togglingTaskIds={togglingTaskIds}
                 onToggleTask={handleToggleTask}
             />
-        </main>
+        </div>
     );
 }

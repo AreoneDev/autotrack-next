@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
-const backendURL = "http://127.0.0.1:54329";
+import { backendURL } from "./endpoints";
 
 export function day(offset = 0): string {
     const today = new Intl.DateTimeFormat("en-CA", {

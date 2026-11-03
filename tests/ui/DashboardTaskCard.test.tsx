@@ -23,7 +23,7 @@ describe("UI-TASK — completion state transitions", () => {
     it.each(["scheduled", "overdue", "completed"] as const)("UI-TASK-01: renders %s state and the correct lead link", (status) => {
         render(<DashboardTaskCard task={{ ...task, status }} />);
         expect(screen.getByRole("link")).toHaveAttribute("href", "/leads/7");
-        expect(screen.getByRole("button", { name: `Mark Call Ada as ${status === "completed" ? "uncompleted" : "completed"}` })).toBeEnabled();
+        expect(screen.getByRole("button", { name: `${status === "completed" ? "Completed" : "Complete"}: Call Ada. Mark as ${status === "completed" ? "uncompleted" : "completed"}` })).toBeEnabled();
         expect(screen.getAllByText(status === "scheduled" ? "Scheduled" : status === "overdue" ? "Overdue" : "Completed").length).toBeGreaterThan(0);
     });
 
@@ -32,7 +32,7 @@ describe("UI-TASK — completion state transitions", () => {
         update.mockReturnValueOnce(request.promise);
         render(<DashboardTaskCard task={task} />);
         const user = userEvent.setup();
-        const button = screen.getByRole("button", { name: "Mark Call Ada as completed" });
+        const button = screen.getByRole("button", { name: "Complete: Call Ada. Mark as completed" });
         await user.click(button);
         expect(button).toBeDisabled();
         await user.click(button);
@@ -40,18 +40,18 @@ describe("UI-TASK — completion state transitions", () => {
         expect(update).toHaveBeenCalledWith(10, true);
         await act(async () => request.resolve(null));
         expect(router.refresh).toHaveBeenCalledTimes(1);
-        await user.click(screen.getByRole("button", { name: "Mark Call Ada as uncompleted" }));
+        await user.click(screen.getByRole("button", { name: "Completed: Call Ada. Mark as uncompleted" }));
         expect(update).toHaveBeenLastCalledWith(10, false);
-        expect(screen.getByRole("button", { name: "Mark Call Ada as completed" })).toBeEnabled();
+        expect(screen.getByRole("button", { name: "Complete: Call Ada. Mark as completed" })).toBeEnabled();
     });
 
     it.each(["returned", "thrown"])("UI-TASK-03: %s failure preserves status and displays an error", async (kind) => {
         if (kind === "returned") update.mockResolvedValueOnce("Permission denied");
         else update.mockRejectedValueOnce(new Error("Permission denied"));
         render(<DashboardTaskCard task={task} />);
-        await userEvent.setup().click(screen.getByRole("button", { name: "Mark Call Ada as completed" }));
+        await userEvent.setup().click(screen.getByRole("button", { name: "Complete: Call Ada. Mark as completed" }));
         expect(await screen.findByText("Permission denied")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Mark Call Ada as completed" })).toBeEnabled();
+        expect(screen.getByRole("button", { name: "Complete: Call Ada. Mark as completed" })).toBeEnabled();
         expect(router.refresh).not.toHaveBeenCalled();
     });
 

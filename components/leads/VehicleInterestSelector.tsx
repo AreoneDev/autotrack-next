@@ -16,69 +16,7 @@ type VehicleInterestSelectorProps = {
 
 type FieldName = keyof VehicleSelection;
 
-function AutocompleteField({
-    label,
-    value,
-    options,
-    placeholder,
-    disabled,
-    onChange,
-    onSelect,
-    onFocus,
-}: {
-    label: string;
-    value: string;
-    options: string[];
-    placeholder: string;
-    disabled?: boolean;
-    onChange: (value: string) => void;
-    onSelect: (value: string) => void;
-    onFocus: () => void;
-}) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <label className="relative text-sm font-medium text-slate-700">
-            {label}
-            <input
-                aria-label={label}
-                value={value}
-                disabled={disabled}
-                onFocus={() => {
-                    setOpen(true);
-                    onFocus();
-                }}
-                onBlur={() => {
-                    window.setTimeout(() => setOpen(false), 120);
-                }}
-                onChange={(event) => {
-                    setOpen(true);
-                    onChange(event.target.value);
-                }}
-                placeholder={placeholder}
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-            />
-            {open && !disabled && options.length > 0 ? (
-                <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                    {options.map((option) => (
-                        <button
-                            key={option}
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => {
-                                onSelect(option);
-                                setOpen(false);
-                            }}
-                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-blue-50"
-                        >
-                            {option}
-                        </button>
-                    ))}
-                </div>
-            ) : null}
-        </label>
-    );
-}
+import AutocompleteField from "@/components/ui/Autocomplete";
 
 export default function VehicleInterestSelector({
     value,

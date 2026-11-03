@@ -152,7 +152,7 @@ export default async function DashboardPage() {
     ];
 
     return (
-        <main className="bg-slate-50 text-slate-900">
+        <div className="bg-slate-50 text-slate-900">
             <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
                 {summaryCards.map((card) => {
                     const Icon = card.icon;
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
                                             {activity.leadName}
                                         </p>
                                     ) : null}
-                                    <p className="mt-1 text-xs text-slate-400">
+                                    <p className="mt-1 text-xs text-slate-500">
                                         {activity.time}
                                     </p>
                                 </div>
@@ -327,6 +327,6 @@ export default async function DashboardPage() {
                     ) : null}
                 </div>
             </section>
-        </main>
+        </div>
     );
 }

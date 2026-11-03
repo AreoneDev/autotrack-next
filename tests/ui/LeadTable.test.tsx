@@ -111,10 +111,10 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         const user = userEvent.setup();
         remove.mockResolvedValueOnce("Delete denied");
         const row = screen.getByRole("link", { name: "Ada Chen" }).closest("tr")!;
-        await user.click(within(row).getByRole("button", { name: "Delete Lead" }));
+        await user.click(within(row).getByRole("button", { name: "Delete Lead Ada Chen" }));
         expect(await screen.findByText("Delete denied")).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ada Chen" })).toBeInTheDocument();
-        await user.click(within(row).getByRole("button", { name: "Delete Lead" }));
+        await user.click(within(row).getByRole("button", { name: "Delete Lead Ada Chen" }));
         expect(screen.queryByRole("link", { name: "Ada Chen" })).not.toBeInTheDocument();
         expect(screen.getAllByRole("row")).toHaveLength(4);
         expect(remove).toHaveBeenLastCalledWith(1);

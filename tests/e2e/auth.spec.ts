@@ -1,7 +1,8 @@
+import { backendURL } from "./fixtures/endpoints";
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ request }) => {
-    const response = await request.post("http://127.0.0.1:54329/__test__/reset");
+    const response = await request.post(`${backendURL}/__test__/reset`);
     expect(response.ok()).toBe(true);
 });
 
