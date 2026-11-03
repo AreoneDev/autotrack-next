@@ -1,4 +1,4 @@
-import { refreshed } from "./fixtures/journeys";
+import { lead, task, refreshed } from "./fixtures/journeys";
 import { backendURL } from "./fixtures/endpoints";
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -6,6 +6,9 @@ import AxeBuilder from "@axe-core/playwright";
 test.describe.configure({ timeout: 60000 });
 
 async function scan(page: Page, info: TestInfo, name: string) {
+    const path = new URL(page.url()).pathname;
+    const title = path === "/login" ? "Sign in" : path.startsWith("/leads/") ? "Lead Details" : path.slice(1, 2).toUpperCase() + path.slice(2);
+    await expect(page).toHaveTitle(`${title} | AutoTrack`);
     const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
         .analyze();
@@ -137,13 +140,17 @@ test("A11Y-03: modal initial focus, both Tab boundaries, Escape and focus restor
     await expect(brief).toBeFocused();
 });
 
-test("A11Y-04: lead details, edit controls, keyboard autocomplete and safe delete cancellation", async ({ page }, info) => {
-    await signIn(page); await createLead(page);
-    await page.getByRole("link", { name: "A11y Customer", exact: true }).click();
+test("A11Y-04: lead details, edit controls, keyboard autocomplete and safe delete cancellation", async ({ page, request }, info) => {
+    // Use an existing task for editor-state scans; CRUD transitions are covered
+    // separately, and a preceding refresh can temporarily move streamed metadata.
+    expect((await request.post(`${backendURL}/__test__/reset`, { data: {
+        leads: [lead({ first_name: "A11y", last_name: "Customer" })],
+        tasks: [task(101, "Follow-up")],
+    } })).ok()).toBe(true);
+    await signIn(page);
+    await page.goto("/leads/1");
     await expect(page.getByRole("button", { name: "Modify", exact: true })).toBeVisible();
     await scan(page, info, "lead-detail");
-    await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
-    await refreshed(page, () => page.getByRole("button", { name: "Add", exact: true }).click());
     await page.getByRole("button", { name: "Edit task Follow-up", exact: true }).click();
     await expect(page.getByLabel("Task title", { exact: true })).toBeVisible();
     await scan(page, info, "task-edit");
