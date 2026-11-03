@@ -33,7 +33,10 @@ npm run lint
 
 Coverage reports are in `coverage/`; the denominator deliberately includes untested components and production repositories so gaps remain visible. Playwright HTML reports and failed traces/screenshots are in `playwright-report/` and `test-results/`. Coverage measures execution, not the adequacy of assertions. Case IDs label test intent, not requirements approved by a product owner.
 
-Remaining high-priority work: run migrations and `supabase/verification/20261031_per_user_data_access.sql` against a disposable database with two independent users, and test real RLS and email callbacks; add lead-detail editing, dashboard and agenda journeys; extend manual screen-reader and zoom/reflow testing, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.
+The separate [disposable Supabase suite](supabase/README.md) runs unmodified migrations and real two-user Auth, repository and RLS checks via `npm run test:supabase`. Its baseline is reconstructed from repository contracts, so it does not establish deployed schema parity. CI runs it as its own required-candidate check with no hosted secrets.
+
+Remaining high-priority work: verify deployed schema parity and real email callbacks; add lead-detail editing, dashboard and agenda journeys; extend manual screen-reader and zoom/reflow testing, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.
 
 Accessibility behavior, scan scope and remaining manual checks are described in [ACCESSIBILITY.md](ACCESSIBILITY.md).
 For simultaneous worktrees, set `E2E_APP_PORT` and `E2E_BACKEND_PORT` to unused ports (for example 3112 and 54341). Only the port numbers are configurable; both services remain on `127.0.0.1`, and Playwright refuses to reuse an existing server.
+
