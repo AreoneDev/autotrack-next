@@ -13,10 +13,25 @@ describe("UI-AUTH — sign-in state transitions", () => {
 
     async function fillCredentials() {
         const user = userEvent.setup();
+        await waitFor(() => expect(screen.getByLabelText("Email", { exact: true })).toBeEnabled());
         await user.type(screen.getByLabelText("Email", { exact: true }), "ada@example.test");
         await user.type(screen.getByLabelText("Password", { exact: true }), "safe-test-password");
         return user;
     }
+
+    it("UI-AUTH-09: form waits for client session readiness before accepting credentials", async () => {
+        const session = deferred<{ data: { session: null } }>();
+        supabase.auth.getSession.mockReturnValue(session.promise);
+        render(<LoginPage />);
+        expect(screen.getByLabelText("Email", { exact: true })).toBeDisabled();
+        expect(screen.getByLabelText("Password", { exact: true })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
+        await act(async () => session.resolve({ data: { session: null } }));
+        await fillCredentials();
+        expect(screen.getByLabelText("Email", { exact: true })).toHaveValue("ada@example.test");
+        expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    });
 
     it("UI-AUTH-01: signed-in visitors are redirected", async () => {
         supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id: "synthetic" } } } });

@@ -1298,6 +1298,7 @@ export default function LeadDetailPanel({
                                 <div className="mt-3 space-y-3">
                                     <div className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_150px_120px_auto]">
                                         <select
+                                            aria-label="New task type"
                                             value={newTaskType}
                                             onChange={(event) =>
                                                 setNewTaskType(event.target.value)
@@ -1320,6 +1321,7 @@ export default function LeadDetailPanel({
                                         </select>
                                         <input
                                             type="date"
+                                            aria-label="New task date"
                                             value={newTaskDate}
                                             onChange={(event) =>
                                                 setNewTaskDate(event.target.value)
@@ -1328,6 +1330,7 @@ export default function LeadDetailPanel({
                                         />
                                         <input
                                             type="time"
+                                            aria-label="New task time"
                                             value={newTaskTime}
                                             onChange={(event) =>
                                                 setNewTaskTime(event.target.value)
@@ -1369,6 +1372,7 @@ export default function LeadDetailPanel({
                                             {isTaskEditing ? (
                                                 <div className="space-y-3">
                                                     <input
+                                                        aria-label="Task title"
                                                         value={draftTaskTitle}
                                                         onChange={(event) =>
                                                             setDraftTaskTitle(
@@ -1378,6 +1382,7 @@ export default function LeadDetailPanel({
                                                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                     />
                                                     <input
+                                                        aria-label="Task notes"
                                                         value={draftTaskNotes}
                                                         onChange={(event) =>
                                                             setDraftTaskNotes(
@@ -1390,6 +1395,7 @@ export default function LeadDetailPanel({
                                                     <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
                                                         <input
                                                             type="date"
+                                                            aria-label="Task date"
                                                             value={draftTaskDate}
                                                             onChange={(event) =>
                                                                 setDraftTaskDate(
@@ -1400,6 +1406,7 @@ export default function LeadDetailPanel({
                                                         />
                                                         <input
                                                             type="time"
+                                                            aria-label="Task time"
                                                             value={draftTaskTime}
                                                             onChange={(event) =>
                                                                 setDraftTaskTime(

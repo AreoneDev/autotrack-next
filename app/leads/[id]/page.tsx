@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { localDateInput } from "@/lib/date";
 import { requireServerClient } from "@/lib/supabase/server";
 
 import LeadDetailPanel, {
@@ -30,7 +31,7 @@ function toDateInputValue(date: Date | null | undefined) {
         return "";
     }
 
-    return date.toISOString().split("T")[0];
+    return localDateInput(date);
 }
 
 function toTimeInputValue(date: Date | null | undefined) {
