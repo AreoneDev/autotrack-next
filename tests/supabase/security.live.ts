@@ -4,6 +4,7 @@ import { Lead } from "@/domain/objects/Lead";
 import { Task } from "@/domain/objects/Task";
 import { Notification } from "@/domain/objects/Notification";
 import { Vehicle } from "@/domain/objects/Vehicle";
+import { hydrateLeadTableData } from "@/lib/persistence/real/supabase/LeadTableHydrator";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
 import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
@@ -246,4 +247,32 @@ describe("Real repository and database integration", () => {
         expect(await repo.clearTradeInVehicle(lead.lead_id)).toBeNull();
         expect(await repo.getTradeInVehicleByLeadId(lead.lead_id)).toBeNull();
     });
+
+    it("DB-LIVE-04 batched FK hydration preserves per-lead trims and respects real relationship RLS", async () => {
+        const rows = await ok(a.db.from("leads").insert([
+            { first_name: "BatchOne" }, { first_name: "BatchTwo" },
+        ]).select());
+        for (const [i, row] of rows.entries()) {
+            await ok(a.db.from("lead_vehicle_interests").insert({
+                lead_id: row.lead_id, vehicle_id: 1, trim_override: "Interest" + i,
+            }));
+        }
+        await ok(a.db.from("lead_trade_in_vehicles").insert({
+            lead_id: rows[0].lead_id, vehicle_id: 1, trim_override: "Trade",
+        }));
+        const inputs = [...rows, b.lead].map(row => new Lead({ leadID: Number(row.lead_id), firstName: String(row.first_name ?? "Synthetic") }));
+        const hydrated = await hydrateLeadTableData(inputs, a.db);
+        expect(hydrated[0].vehicleInterest?.trim).toBe("Interest0");
+        expect(hydrated[1].vehicleInterest?.trim).toBe("Interest1");
+        expect(hydrated[0].tradeInVehicle?.trim).toBe("Trade");
+        expect(hydrated[1].tradeInVehicle).toBeNull();
+        expect(hydrated[0].vehicleInterest?.vehicleID).toBe(1);
+        expect(hydrated[0].vehicleInterest).not.toBe(hydrated[1].vehicleInterest);
+        expect(hydrated[2].vehicleInterest).toBeNull();
+        expect(hydrated[2].tradeInVehicle).toBeNull();
+        expect((await ok(a.db.from("vehicles").select("trim").eq("vehicle_id", 1).single())).trim).toBe("Base");
+        const other = await hydrateLeadTableData(rows.map(row => new Lead({ leadID: Number(row.lead_id), firstName: String(row.first_name ?? "Synthetic") })), b.db);
+        expect(other.every(lead => lead.vehicleInterest === null && lead.tradeInVehicle === null)).toBe(true);
+    });
+
 });

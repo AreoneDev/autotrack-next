@@ -43,9 +43,11 @@ npm run lint
 
 Coverage reports are in `coverage/`; the denominator deliberately includes untested components and production repositories so gaps remain visible. Playwright HTML reports and failed traces/screenshots are in `playwright-report/` and `test-results/`. Coverage measures execution, not the adequacy of assertions. Case IDs label test intent, not requirements approved by a product owner.
 
-The separate [disposable Supabase suite](supabase/README.md) runs unmodified migrations and real two-user Auth, repository and RLS checks via `npm run test:supabase`. Its baseline is reconstructed from repository contracts, so it does not establish deployed schema parity. CI runs it as its own required-candidate check with no hosted secrets.
+The separate [disposable Supabase suite](supabase/README.md) runs unmodified migrations and real two-user Auth, repository and RLS checks via npm run test:supabase. Its baseline is reconstructed from repository contracts, so it does not establish deployed schema parity. CI runs it as its own required-candidate check with no hosted secrets.
 
-Remaining high-priority work: verify deployed schema parity and real email callbacks; cover vehicle-association partial failures and real database transactions; extend manual screen-reader and zoom/reflow testing, performance/load, security and backup/recovery tests. No current test should be interpreted as evidence of production RLS enforcement.
+Performance/load, security regression, dependency auditing and isolated backup/recovery are described in [NONFUNCTIONAL.md](NONFUNCTIONAL.md).
+
+Remaining high-priority work: verify deployed schema parity and real email callbacks; cover vehicle-association partial failures and real database transactions; extend manual screen-reader and zoom/reflow testing and broader security coverage. No current test should be interpreted as evidence of production RLS enforcement.
 
 Accessibility behavior, scan scope and remaining manual checks are described in [ACCESSIBILITY.md](ACCESSIBILITY.md).
-For simultaneous worktrees, set `E2E_APP_PORT` and `E2E_BACKEND_PORT` to unused ports (for example 3112 and 54341). Only the port numbers are configurable; both services remain on `127.0.0.1`, and Playwright refuses to reuse an existing server.
+For simultaneous worktrees, set E2E_APP_PORT and E2E_BACKEND_PORT to unused ports. Both services remain on 127.0.0.1 and Playwright refuses to reuse an existing server.

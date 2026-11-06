@@ -18,6 +18,9 @@
     "test:e2e": "playwright test",
     "test:all": "npm run test:coverage && npm run test:e2e",
     "typecheck": "tsc --noEmit",
+    "test:nfr": "playwright test --config tests/nonfunctional/playwright.config.ts",
+    "test:recovery": "node tests/recovery/run.mjs",
+    "test:dependencies": "node tests/nonfunctional/dependency-audit.mjs",
     "test:a11y": "playwright test accessibility.spec.ts",
     "test:supabase": "node tests/supabase/run.mjs"
   },
@@ -25,7 +28,7 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.108.1",
     "lucide-react": "^1.17.0",
-    "next": "^16.2.9",
+    "next": "^16.4.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -41,7 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.4.4",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "tailwindcss": "^4",

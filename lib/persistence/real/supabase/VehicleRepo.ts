@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Vehicle } from "@/domain/objects/Vehicle";
 
-type VehicleRow = {
+export type VehicleRow = {
     vehicle_id: number;
     make: string | null;
     model: string | null;
@@ -21,7 +21,7 @@ type VehicleInsertRow = Omit<VehicleRow, "vehicle_id"> & {
 
 const TABLE_NAME = "vehicles";
 
-function mapRowToVehicle(row: VehicleRow): Vehicle {
+export function mapRowToVehicle(row: VehicleRow): Vehicle {
     const vehicle = new Vehicle(
         row.make,
         row.model,

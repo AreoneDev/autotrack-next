@@ -2,8 +2,8 @@ import { createServer } from "node:http";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
-const appPort = Number(process.env.E2E_APP_PORT ?? 3100);
-const backendPort = Number(process.env.E2E_BACKEND_PORT ?? 54329);
+const backendPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT ?? process.env.E2E_BACKEND_PORT ?? 54329);
+const appPort = Number(process.env.AUTOTRACK_TEST_BACKEND_PORT === "54339" ? 3200 : (process.env.E2E_APP_PORT ?? 3100));
 if (![appPort, backendPort].every((port) => Number.isInteger(port) && port >= 1024 && port <= 65535)) throw new Error("Invalid E2E port");
 const user = {
     id: "11111111-1111-4111-8111-111111111111", aud: "authenticated", role: "authenticated",
@@ -57,6 +57,7 @@ function filterRows(rows, search) {
         const dot = filter.indexOf(".");
         const operation = filter.slice(0, dot);
         const value = filter.slice(dot + 1);
+        if (operation === "in") return value.slice(1, -1).split(",").includes(String(row[column]));
         if (operation === "eq") return String(row[column]) === value;
         if (operation === "neq") return String(row[column]) !== value;
         if (operation === "gte") return String(row[column]) >= value;
@@ -111,6 +112,9 @@ const server = createServer(async (request, response) => {
         }
         let selected = filterRows(tables[table], url.searchParams);
         if (request.method === "GET") {
+            if (url.searchParams.get("select")?.includes("vehicles(*)")) {
+                selected = selected.map(row => ({ ...row, vehicles: tables.vehicles.find(vehicle => vehicle.vehicle_id === row.vehicle_id) ?? null }));
+            }
             const ordering = url.searchParams.get("order");
             if (ordering) {
                 const [column, direction] = ordering.split(".");
