@@ -8,6 +8,7 @@ if (!/^autotrack-security-[0-9a-f]{8}$/.test(process.env.AUTOTRACK_DISPOSABLE_RU
 }
 const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 let db: SupabaseClient;
+let concurrentEditors: SupabaseClient[];
 beforeAll(async () => {
     const admin = createClient(url!, process.env.AUTOTRACK_TEST_SERVICE_KEY!, options);
     const email = "atomic-" + randomUUID() + "@example.invalid";
@@ -16,6 +17,11 @@ beforeAll(async () => {
     expect(created.error).toBeNull();
     db = createClient(url!, process.env.AUTOTRACK_TEST_ANON_KEY!, options);
     expect((await db.auth.signInWithPassword({ email, password })).error).toBeNull();
+    // Give each concurrent writer its own auth client so their HTTP requests
+    // do not share Supabase's per-client auth lock/session refresh path.
+    const secondEditor = createClient(url!, process.env.AUTOTRACK_TEST_ANON_KEY!, options);
+    expect((await secondEditor.auth.signInWithPassword({ email, password })).error).toBeNull();
+    concurrentEditors = [db, secondEditor];
 });
 const selection = (trim: string) => ({ year: "2026", make: "Synthetic", model: "Catalogue", trim });
 async function lead() {
@@ -30,7 +36,8 @@ function draft(id: number, name: string, request = randomUUID(), version = 1) {
 
 it("parallel editors: exactly one whole aggregate wins, stale writer changes nothing", async () => {
     const row = await lead();
-    const replies = await Promise.all(["Editor A", "Editor B"].map(name => db.rpc("autotrack_save_lead_details", draft(row.lead_id, name))));
+    const replies = await Promise.all(["Editor A", "Editor B"].map((name, index) =>
+        concurrentEditors[index].rpc("autotrack_save_lead_details", draft(row.lead_id, name))));
     expect(replies.filter(r => !r.error)).toHaveLength(1);
     expect(replies.find(r => r.error)?.error?.code).toBe("40001");
     const saved = await db.from("leads").select().eq("lead_id", row.lead_id).single();
