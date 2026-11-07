@@ -32,6 +32,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run test:atomic-db
       - run: npm run test:coverage
       - run: npx playwright install --with-deps chromium firefox webkit
       - name: Browser journeys and accessibility scans (all four projects)

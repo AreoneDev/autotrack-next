@@ -14,6 +14,7 @@ const user = {
 let tables;
 let nextId;
 let failure;
+let saveRequests;
 function reset(seed = {}) {
     tables = {
         leads: [], tasks: [], notifications: [], vehicles: [],
@@ -21,9 +22,10 @@ function reset(seed = {}) {
     };
     nextId = 100;
     failure = null;
+    saveRequests = new Map();
     for (const [table, rows] of Object.entries(seed)) {
         if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
-        tables[table] = rows;
+        tables[table] = rows.map(row => table === "leads" ? { version: 1, ...row } : row);
         for (const row of rows) {
             const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
             const id = row[idColumn];
@@ -101,6 +103,46 @@ const server = createServer(async (request, response) => {
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
         if (url.pathname === "/auth/v1/otp" && request.method === "POST") return send(200, {});
         if (url.pathname === "/auth/v1/logout" && request.method === "POST") return send(200, {});
+        // Browser contract double only. Real SQL rollback/RLS is tested by
+        // tests/atomic and tests/supabase, never inferred from this simulation.
+        if (url.pathname === "/rest/v1/rpc/autotrack_save_lead_details" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const row = tables.leads.find(l => l.lead_id === body.p_lead_id);
+            if (!row) return send(404, { message: "Lead not found." });
+            const fingerprint = JSON.stringify(body);
+            const previous = saveRequests.get(body.p_request_id);
+            if (previous) return previous.fingerprint === fingerprint ? send(200, previous.result)
+                : send(400, { message: "Request ID was already used for different changes." });
+            if (row.version !== body.p_expected_version) return send(409, { code: "40001", message: "This lead changed in another session. Reload before saving again." });
+            const staged = structuredClone(tables);
+            const checkFailure = (table, method) => {
+                if (failure?.table === table && failure.method === method) {
+                    failure = null;
+                    throw new Error("Synthetic write failure");
+                }
+            };
+            checkFailure("leads", "PATCH");
+            Object.assign(staged.leads.find(l => l.lead_id === row.lead_id), body.p_details, { version: row.version + 1 });
+            function association(table, selection) {
+                const empty = !selection || Object.values(selection).every(v => !String(v).trim());
+                checkFailure(table, empty ? "DELETE" : "POST");
+                staged[table] = staged[table].filter(r => r.lead_id !== row.lead_id);
+                if (empty) return null;
+                const matches = tables.vehicles.filter(v => v.year === Number(selection.year)
+                    && v.make.toLowerCase() === selection.make.toLowerCase() && v.model.toLowerCase() === selection.model.toLowerCase());
+                const vehicle = matches.find(v => v.trim?.toLowerCase() === selection.trim.toLowerCase()) ?? matches[0];
+                if (!vehicle) throw new Error("Selected vehicle was not found in the catalog.");
+                staged[table].push({ lead_id: row.lead_id, vehicle_id: vehicle.vehicle_id,
+                    trim_override: selection.trim && selection.trim !== vehicle.trim ? selection.trim : null });
+                return vehicle.vehicle_id;
+            }
+            const interest = association("lead_vehicle_interests", body.p_interest);
+            const tradeIn = association("lead_trade_in_vehicles", body.p_trade_in);
+            const result = { version: row.version + 1, vehicle_interest_id: interest, trade_in_vehicle_id: tradeIn };
+            tables = staged;
+            saveRequests.set(body.p_request_id, { fingerprint, result });
+            return send(200, result);
+        }
         const table = url.pathname.replace("/rest/v1/", "");
         if (!url.pathname.startsWith("/rest/v1/") || !Object.hasOwn(tables, table)) {
             return send(404, { message: `Unimplemented test endpoint: ${request.method} ${url.pathname}` });
@@ -132,11 +174,11 @@ const server = createServer(async (request, response) => {
         if (request.method === "POST") {
             const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
             if (!idColumn) return send(400, { message: `Unsupported test insert: ${table}` });
-            const inserted = (Array.isArray(body) ? body : [body]).map((row) => ({ ...row, [idColumn]: row[idColumn] ?? nextId++ }));
+            const inserted = (Array.isArray(body) ? body : [body]).map((row) => ({ ...(table === "leads" ? { version: 1 } : {}), ...row, [idColumn]: row[idColumn] ?? nextId++ }));
             tables[table].push(...inserted);
             return send(201, request.headers.accept?.includes("vnd.pgrst.object+json") ? inserted[0] : inserted);
         }
-        if (request.method === "PATCH") { selected.forEach((row) => Object.assign(row, body)); return send(200, selected); }
+        if (request.method === "PATCH") { selected.forEach((row) => Object.assign(row, body, table === "leads" ? { version: (row.version ?? 1) + 1 } : {})); return send(200, selected); }
         if (request.method === "DELETE") { tables[table] = tables[table].filter((row) => !selected.includes(row)); return send(200, selected); }
         return send(405, { message: "Unsupported test method" });
     } catch (error) {

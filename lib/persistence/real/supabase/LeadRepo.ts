@@ -2,9 +2,11 @@ import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { VehicleSelection } from "@/domain/business/VehicleSelectionService";
 
 type LeadRow = {
     lead_id: number;
+    version?: number;
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
@@ -29,6 +31,7 @@ type LeadRow = {
 type LeadInsertRow = Omit<LeadRow, "lead_id"> & {
     lead_id?: number;
 };
+type LeadDetailsRow = Omit<LeadRow, "lead_id" | "version" | "created_at" | "last_interaction_date" | "last_interaction_by">;
 
 const TABLE_NAME = "leads";
 
@@ -43,6 +46,7 @@ function toDate(value: string | null, fallback = new Date()): Date {
 function mapRowToLead(row: LeadRow): Lead {
     return new Lead({
         leadID: row.lead_id,
+        version: row.version ?? null,
         firstName: row.first_name ?? "",
         lastName: row.last_name ?? "",
         phone: row.phone ?? "",
@@ -69,8 +73,8 @@ function mapRowToLead(row: LeadRow): Lead {
     });
 }
 
-function mapLeadToRow(lead: Lead): LeadInsertRow {
-    const row: LeadInsertRow = {
+function mapLeadDetailsToRow(lead: Lead): LeadDetailsRow {
+    return {
         first_name: lead.firstName,
         last_name: lead.lastName,
         phone: lead.phone,
@@ -86,10 +90,16 @@ function mapLeadToRow(lead: Lead): LeadInsertRow {
         follow_up_date: lead.followUpDate.toISOString(),
         score: lead.score,
         notes: lead.notes,
+        status: lead.status,
+    };
+}
+
+function mapLeadToRow(lead: Lead): LeadInsertRow {
+    const row: LeadInsertRow = {
+        ...mapLeadDetailsToRow(lead),
         created_at: lead.createdAt.toISOString(),
         last_interaction_date: lead.lastInteractionDate?.toISOString() ?? null,
         last_interaction_by: lead.lastInteractionBy,
-        status: lead.status,
     };
 
     if (lead.leadID !== 0) {
@@ -101,6 +111,36 @@ function mapLeadToRow(lead: Lead): LeadInsertRow {
 
 export class LeadRepo {
     constructor(private readonly client: SupabaseClient = supabase) {}
+
+    /** The request ID belongs to a single immutable draft and survives transport retries. */
+    async saveLeadDetails(lead: Lead, interest: VehicleSelection, tradeIn: VehicleSelection, requestId: string): Promise<{
+        version: number;
+        vehicleInterestId: number | null;
+        tradeInVehicleId: number | null;
+    }> {
+        if (lead.version === null) {
+            throw new Error("Lead version is unavailable. Apply the database migrations and reload before saving.");
+        }
+        // Identity, creation time and communication history are never editable here.
+        const { data, error } = await this.client.rpc("autotrack_save_lead_details", {
+            p_lead_id: lead.leadID,
+            p_expected_version: lead.version,
+            p_request_id: requestId,
+            p_details: mapLeadDetailsToRow(lead),
+            p_interest: interest,
+            p_trade_in: tradeIn,
+        });
+        if (error) {
+            if (error.code === "PGRST202" || error.code === "42883") {
+                throw new Error("Atomic lead saving is unavailable. Apply the database migrations and reload before saving.");
+            }
+            throw new Error(error.message);
+        }
+        if (!data || !Number.isSafeInteger(data.version) || data.version < 1) {
+            throw new Error("Save response was not confirmed. Retry the same changes to confirm the result.");
+        }
+        return { version: data.version, vehicleInterestId: data.vehicle_interest_id, tradeInVehicleId: data.trade_in_vehicle_id };
+    }
 
     async getAllLeads(): Promise<Lead[]> {
         const data = await readAllPages<LeadRow>((from, to) => this.client

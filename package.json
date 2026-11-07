@@ -22,7 +22,9 @@
     "test:recovery": "node tests/recovery/run.mjs",
     "test:dependencies": "node tests/nonfunctional/dependency-audit.mjs",
     "test:a11y": "playwright test accessibility.spec.ts",
-    "test:supabase": "node tests/supabase/run.mjs"
+    "test:supabase": "node tests/supabase/run.mjs",
+    "test:atomic-db": "node tests/atomic/run.mjs",
+    "test:atomic-concurrency": "node tests/atomic/concurrency.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@electric-sql/pglite": "^0.5.15",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -54,6 +57,7 @@
     "eslint-config-next": "16.4.4",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
+    "pg": "^8.23.1",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.11",
     "typescript": "^5"

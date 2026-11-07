@@ -3,6 +3,7 @@ import { Vehicle } from "./Vehicle";
 export class Lead {
 
     leadID: number;
+    version: number | null;
     firstName: string;
     lastName: string;
     phone: string;
@@ -33,6 +34,7 @@ export class Lead {
 
     constructor({
                     leadID = 0,
+                    version = null,
                     firstName = "",
                     lastName = "",
                     phone = "",
@@ -56,6 +58,7 @@ export class Lead {
                     status = true,
                 }: {
         leadID?: number;
+        version?: number | null;
         firstName?: string;
         lastName?: string;
         phone?: string;
@@ -94,6 +97,7 @@ export class Lead {
         }
 
         this.leadID = leadID;
+        this.version = version;
 
         this.firstName =
             isFirstEmpty ? "" : firstName.trim();

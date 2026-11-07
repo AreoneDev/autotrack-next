@@ -3,7 +3,7 @@ do $$
 declare t text; priv text; invalid boolean; actual bigint;
 begin
   foreach t in array array['leads','tasks','notifications','vehicles',
-    'lead_vehicle_interests','lead_trade_in_vehicles','imported_cars','sync_deleted'] loop
+    'lead_vehicle_interests','lead_trade_in_vehicles','imported_cars','sync_deleted','lead_save_requests'] loop
     if not (select relrowsecurity from pg_class where oid = format('public.%I',t)::regclass) then
       raise exception 'RLS disabled on %', t;
     end if;
@@ -18,6 +18,18 @@ begin
       end if;
     end loop;
   end loop;
+  foreach t in array array['autotrack_resolve_vehicle(jsonb)',
+    'autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb)'] loop
+    if (select prosecdef from pg_proc where oid = ('public.' || t)::regprocedure)
+      or has_function_privilege('anon', 'public.' || t, 'EXECUTE')
+      or not has_function_privilege('authenticated', 'public.' || t, 'EXECUTE') then
+      raise exception 'Atomic save function privileges are invalid for %', t;
+    end if;
+  end loop;
+  if has_table_privilege('authenticated','public.lead_save_requests','UPDATE')
+    or has_table_privilege('authenticated','public.lead_save_requests','DELETE') then
+    raise exception 'Save receipts must be immutable for authenticated clients';
+  end if;
   if exists(select 1 from pg_policies where schemaname='public' and policyname='legacy_allow_all') then
     raise exception 'Legacy permissive policies survived';
   end if;

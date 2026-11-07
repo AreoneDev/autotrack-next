@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/ui/Modal";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { localDateInput } from "@/lib/date";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
@@ -32,10 +32,7 @@ import {
 } from "lucide-react";
 
 import { ScoringService } from "@/domain/business/ScoringService";
-import {
-    VehicleSelection,
-    VehicleSelectionService,
-} from "@/domain/business/VehicleSelectionService";
+import type { VehicleSelection } from "@/domain/business/VehicleSelectionService";
 import { Lead } from "@/domain/objects/Lead";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
@@ -65,6 +62,7 @@ export interface LeadDetailNotificationViewModel {
 
 export interface LeadDetailViewModel {
     leadID: number;
+    version: number | null;
     firstName: string;
     lastName: string;
     phone: string;
@@ -253,6 +251,7 @@ function createVehicleReference(vehicleId: number | null) {
 function createLeadFromViewModel(viewModel: LeadDetailViewModel) {
     return new Lead({
         leadID: viewModel.leadID,
+        version: viewModel.version,
         firstName: viewModel.firstName,
         lastName: viewModel.lastName,
         phone: viewModel.phone,
@@ -361,10 +360,15 @@ export default function LeadDetailPanel({
     const [draftTaskDate, setDraftTaskDate] = useState("");
     const [draftTaskTime, setDraftTaskTime] = useState("");
     const scoringService = useMemo(() => new ScoringService(), []);
-    const vehicleSelectionService = useMemo(
-        () => new VehicleSelectionService(),
-        []
-    );
+    const saveInFlight = useRef(false);
+    const pendingSave = useRef<{
+        fingerprint: string;
+        requestId: string;
+        lead: Lead;
+        interest: VehicleSelection;
+        tradeIn: VehicleSelection;
+        priority: ReturnType<ScoringService["calculatePriority"]>;
+    } | null>(null);
 
     async function reloadLeadTasks(taskRepository = new TaskRepo()) {
         const refreshedTasks = await taskRepository.getTasksByLeadId(
@@ -392,6 +396,8 @@ export default function LeadDetailPanel({
     }
 
     async function handleSave() {
+        if (saveInFlight.current) return;
+        saveInFlight.current = true;
         setErrorMessage(null);
         setSaving(true);
 
@@ -408,34 +414,19 @@ export default function LeadDetailPanel({
             const priority = scoringService.calculatePriority(leadToSave);
             leadToSave.updateScore(priority.score);
 
-            const error = await leadRepository.updateLead(leadToSave);
-
-            if (error) {
-                setErrorMessage(error);
-                return;
+            const fingerprint = JSON.stringify([normalizedDraftLead, draftVehicleInterest, draftTradeInVehicle]);
+            if (pendingSave.current?.fingerprint !== fingerprint) {
+                pendingSave.current = {
+                    fingerprint, requestId: crypto.randomUUID(), lead: leadToSave,
+                    interest: { ...draftVehicleInterest }, tradeIn: { ...draftTradeInVehicle }, priority,
+                };
             }
-
-            const vehicleError =
-                await vehicleSelectionService.saveLeadVehicleInterest(
-                    currentLead.leadID,
-                    draftVehicleInterest
-                );
-
-            if (vehicleError) {
-                setErrorMessage(vehicleError);
-                return;
-            }
-
-            const tradeInError =
-                await vehicleSelectionService.saveLeadTradeInVehicle(
-                    currentLead.leadID,
-                    draftTradeInVehicle
-                );
-
-            if (tradeInError) {
-                setErrorMessage(tradeInError);
-                return;
-            }
+            // Freeze all derived values as well as the ID. Dates/scores can depend
+            // on the clock, so reconstructing them would change a retry's payload.
+            const pending = pendingSave.current;
+            const saved = await leadRepository.saveLeadDetails(
+                pending.lead, pending.interest, pending.tradeIn, pending.requestId
+            );
 
             const vehicleDescription =
                 getVehicleDescription(draftVehicleInterest);
@@ -444,9 +435,12 @@ export default function LeadDetailPanel({
 
             const nextLead = {
                 ...normalizedDraftLead,
-                score: priority.score,
-                priorityLevel: priority.level,
-                priorityReasons: priority.reasons,
+                version: saved.version,
+                vehicleInterestId: saved.vehicleInterestId,
+                tradeInVehicleId: saved.tradeInVehicleId,
+                score: pending.priority.score,
+                priorityLevel: pending.priority.level,
+                priorityReasons: pending.priority.reasons,
                 vehicleInterest: vehicleDescription,
                 vehicleInterestYear: draftVehicleInterest.year,
                 vehicleInterestMake: draftVehicleInterest.make,
@@ -462,12 +456,14 @@ export default function LeadDetailPanel({
             setCurrentLead(nextLead);
             setDraftLead(nextLead);
             setIsEditing(false);
+            pendingSave.current = null;
             router.refresh();
         } catch (error) {
             setErrorMessage(
                 error instanceof Error ? error.message : "Failed to save lead."
             );
         } finally {
+            saveInFlight.current = false;
             setSaving(false);
         }
     }
