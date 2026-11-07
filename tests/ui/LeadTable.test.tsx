@@ -98,29 +98,34 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         expect(screen.queryByRole("link", { name: "Unsaved" })).not.toBeInTheDocument();
     });
 
-    it("UI-LEAD-07: failed status update rolls back; retry persists the new status", async () => {
+    it.each(["returned", "thrown"])("UI-LEAD-07: %s status failure rolls back; retry persists the new status", async (kind) => {
         setup();
         const user = userEvent.setup();
-        update.mockResolvedValueOnce("Update denied");
+        if (kind === "returned") update.mockResolvedValueOnce("Update denied");
+        else update.mockRejectedValueOnce(new Error("Unable to load leads. Check your connection and try again."));
         const row = screen.getByRole("link", { name: "Ada Chen" }).closest("tr")!;
         await user.click(within(row).getByRole("combobox"));
         await user.click(await screen.findByRole("option", { name: "Lost" }));
-        expect(await screen.findByText("Update denied")).toBeInTheDocument();
+        expect(await screen.findByText(kind === "returned" ? "Update denied" : "Unable to load leads. Check your connection and try again.")).toBeInTheDocument();
         expect(within(row).getByRole("combobox")).toHaveTextContent("Active");
+        expect(within(row).getByRole("combobox")).toBeEnabled();
         await user.click(within(row).getByRole("combobox"));
         await user.click(await screen.findByRole("option", { name: "Lost" }));
         expect(within(row).getByRole("combobox")).toHaveTextContent("Lost");
         expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ leadID: 1, status: false }));
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
-    it("UI-LEAD-08: failed delete preserves the row; successful retry removes only that row", async () => {
+    it.each(["returned", "thrown"])("UI-LEAD-08: %s delete failure preserves the row; successful retry removes only that row", async (kind) => {
         setup();
         const user = userEvent.setup();
-        remove.mockResolvedValueOnce("Delete denied");
+        if (kind === "returned") remove.mockResolvedValueOnce("Delete denied");
+        else remove.mockRejectedValueOnce(new Error("Unable to load leads. Check your connection and try again."));
         const row = screen.getByRole("link", { name: "Ada Chen" }).closest("tr")!;
         await user.click(within(row).getByRole("button", { name: "Delete Lead Ada Chen" }));
-        expect(await screen.findByText("Delete denied")).toBeInTheDocument();
+        expect(await screen.findByText(kind === "returned" ? "Delete denied" : "Unable to load leads. Check your connection and try again.")).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ada Chen" })).toBeInTheDocument();
+        expect(within(row).getByRole("button", { name: "Delete Lead Ada Chen" })).toBeEnabled();
         await user.click(within(row).getByRole("button", { name: "Delete Lead Ada Chen" }));
         expect(screen.queryByRole("link", { name: "Ada Chen" })).not.toBeInTheDocument();
         expect(screen.getAllByRole("row")).toHaveLength(4);

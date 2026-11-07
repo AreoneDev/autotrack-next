@@ -1,3 +1,4 @@
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { Lead } from "@/domain/objects/Lead";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -108,7 +109,7 @@ export class LeadRepo {
             .order("lead_id", { ascending: true });
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("leads", error);
         }
 
         return data.map((row) => mapRowToLead(row as LeadRow));
@@ -121,7 +122,11 @@ export class LeadRepo {
             .eq("lead_id", id)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("leads", error);
+        }
+
+        if (!data) {
             return null;
         }
 
@@ -153,7 +158,7 @@ export class LeadRepo {
             .limit(limit);
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("leads", error);
         }
 
         return data.map((row) => mapRowToLead(row as LeadRow));
@@ -175,7 +180,7 @@ export class LeadRepo {
             .order("follow_up_date", { ascending: true });
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("leads", error);
         }
 
         return data.map((row) => mapRowToLead(row as LeadRow));

@@ -82,10 +82,11 @@ const server = createServer(async (request, response) => {
         if (url.pathname === "/__test__/reset" && request.method === "POST") { reset(body); return send(200, {}); }
         if (url.pathname === "/__test__/state" && request.method === "GET") return send(200, tables);
         if (url.pathname === "/__test__/fail-next" && request.method === "POST") {
-            if (!Object.hasOwn(tables, body.table) || !["POST", "PATCH", "DELETE"].includes(body.method)) {
+            if (!Object.hasOwn(tables, body.table) || !["GET", "POST", "PATCH", "DELETE"].includes(body.method) ||
+                (body.count !== undefined && (!Number.isInteger(body.count) || body.count < 1 || body.count > 100))) {
                 return send(400, { message: "Invalid failure rule" });
             }
-            failure = body;
+            failure = { ...body, remaining: body.count ?? 1 };
             return send(200, {});
         }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
@@ -107,8 +108,9 @@ const server = createServer(async (request, response) => {
         }
         if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
         if (failure?.table === table && failure.method === request.method) {
-            failure = null;
-            return send(503, { message: "Synthetic write failure" });
+            failure.remaining -= 1;
+            if (failure.remaining === 0) failure = null;
+            return send(503, { message: request.method === "GET" ? "Synthetic read failure" : "Synthetic write failure" });
         }
         let selected = filterRows(tables[table], url.searchParams);
         if (request.method === "GET") {

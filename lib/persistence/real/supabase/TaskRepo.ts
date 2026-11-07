@@ -1,3 +1,4 @@
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { Lead } from "@/domain/objects/Lead";
 import { Task } from "@/domain/objects/Task";
 import { supabase } from "@/lib/supabase/client";
@@ -214,7 +215,7 @@ export class TaskRepo {
                 .range(start, start + QUERY_PAGE_SIZE - 1);
 
             if (error || !data) {
-                return [];
+                throw new RepositoryReadError("tasks", error);
             }
 
             rows.push(...data.map((row) => row as TaskRow));
@@ -236,7 +237,11 @@ export class TaskRepo {
             .eq("task_id", id)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("tasks", error);
+        }
+
+        if (!data) {
             return null;
         }
 
@@ -256,7 +261,7 @@ export class TaskRepo {
                 .range(start, start + QUERY_PAGE_SIZE - 1);
 
             if (error || !data) {
-                return [];
+                throw new RepositoryReadError("tasks", error);
             }
 
             rows.push(...data.map((row) => row as TaskRow));

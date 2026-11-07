@@ -1,3 +1,4 @@
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { Vehicle } from "@/domain/objects/Vehicle";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -37,7 +38,11 @@ export class LeadVehicleInterestRepo {
             .eq("lead_id", leadId)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("lead vehicle details", error);
+        }
+
+        if (!data) {
             return null;
         }
 

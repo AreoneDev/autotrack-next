@@ -1,3 +1,4 @@
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { Lead } from "@/domain/objects/Lead";
 import { Notification } from "@/domain/objects/Notification";
 import { supabase } from "@/lib/supabase/client";
@@ -62,7 +63,7 @@ export class NotificationRepo {
             .order("date", { ascending: false });
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("notifications", error);
         }
 
         return data.map((row) => mapRowToNotification(row as NotificationRow));
@@ -75,7 +76,11 @@ export class NotificationRepo {
             .eq("notification_id", id)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("notifications", error);
+        }
+
+        if (!data) {
             return null;
         }
 
@@ -90,7 +95,7 @@ export class NotificationRepo {
             .order("date", { ascending: false });
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("notifications", error);
         }
 
         return data.map((row) => mapRowToNotification(row as NotificationRow));

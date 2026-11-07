@@ -186,19 +186,21 @@ export default function LeadTable({ leads }: LeadTableProps) {
         setDeleteError(null);
         setDeletingLeadId(leadId);
 
-        const leadRepository = new LeadRepo();
-        const error = await leadRepository.deleteLead(leadId);
-
-        setDeletingLeadId(null);
-
-        if (error) {
-            setDeleteError(error);
-            return;
+        try {
+            const leadRepository = new LeadRepo();
+            const error = await leadRepository.deleteLead(leadId);
+            if (error) {
+                setDeleteError(error);
+                return;
+            }
+            setLeadList((currentLeads) =>
+                currentLeads.filter((lead) => lead.leadID !== leadId)
+            );
+        } catch (error) {
+            setDeleteError(error instanceof Error ? error.message : "Unable to delete lead. Check your connection and try again.");
+        } finally {
+            setDeletingLeadId(null);
         }
-
-        setLeadList((currentLeads) =>
-            currentLeads.filter((lead) => lead.leadID !== leadId)
-        );
     };
 
     const handleStatusChange = async (leadId: number, newStatus: boolean) => {
@@ -222,19 +224,20 @@ export default function LeadTable({ leads }: LeadTableProps) {
             )
         );
 
-        const leadRepository = new LeadRepo();
-        const error = await leadRepository.updateLead(leadToUpdate);
-
-        setUpdatingStatusLeadId(null);
-
-        if (error) {
+        try {
+            const leadRepository = new LeadRepo();
+            const error = await leadRepository.updateLead(leadToUpdate);
+            if (error) throw new Error(error);
+        } catch (error) {
             leadToUpdate.status = previousStatus;
             setLeadList((currentLeads) =>
                 currentLeads.map((lead) =>
                     lead.leadID === leadId ? leadToUpdate : lead
                 )
             );
-            setDeleteError(error);
+            setDeleteError(error instanceof Error ? error.message : "Unable to update lead status. Check your connection and try again.");
+        } finally {
+            setUpdatingStatusLeadId(null);
         }
     };
 

@@ -35,11 +35,9 @@ describe("PERF-DB — bounded association hydration", () => {
         expect(leads[0].vehicleInterest?.vehicleID).toBe(42);
         expect(vehicle.trim).toBe("Base");
     });
-    it("PERF-DB-03: one failed relationship query does not discard the other", async () => {
+    it("PERF-DB-03: a failed relationship query rejects instead of showing missing vehicle data", async () => {
         const db = scriptedClient([{ error: { message: "Denied" } },
             { data: [{ lead_id: 1, trim_override: null, vehicles: vehicle }] }]);
-        const [lead] = await hydrateLeadTableData([makeLead()], db.client);
-        expect(lead.vehicleInterest).toBeNull();
-        expect(lead.tradeInVehicle?.model).toBe("Catalogue");
+        await expect(hydrateLeadTableData([makeLead()], db.client)).rejects.toThrow("Unable to load lead vehicle details");
     });
 });

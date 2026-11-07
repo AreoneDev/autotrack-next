@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { type FormEvent, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import ReadError from "@/components/ui/read-error";
 import AgendaCalendar from "@/components/agenda/AgendaCalendar";
 import AgendaActivityPanel from "@/components/agenda/AgendaActivityPanel";
 
@@ -84,6 +85,7 @@ export default function AgendaPage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [agendaActivities, setAgendaActivities] = useState<AgendaActivity[]>([]);
     const [loading, setLoading] = useState(true);
+    const [readError, setReadError] = useState(false);
     const [currentTimeMs, setCurrentTimeMs] = useState(0);
     const [todayDateString, setTodayDateString] = useState("");
     const [pastUnfinishedTaskCounts, setPastUnfinishedTaskCounts] = useState<
@@ -94,6 +96,8 @@ export default function AgendaPage() {
     const [leadSearchText, setLeadSearchText] = useState("");
     const [leadSearchResults, setLeadSearchResults] = useState<Lead[]>([]);
     const [leadSearchLoading, setLeadSearchLoading] = useState(false);
+    const [leadSearchError, setLeadSearchError] = useState(false);
+    const [searchRefreshKey, setSearchRefreshKey] = useState(0);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [newTaskType, setNewTaskType] = useState("");
     const [newTaskNotes, setNewTaskNotes] = useState("");
@@ -108,54 +112,63 @@ export default function AgendaPage() {
         async function loadAgenda() {
             setLoading(true);
 
-            const leadRepo = new LeadRepo();
-            const taskRepo = new TaskRepo();
-            const notificationRepo = new NotificationRepo();
-            const [leads, tasks, notifications] = await Promise.all([
-                leadRepo.getAllLeads(),
-                taskRepo.getAllTasks(),
-                notificationRepo.getAllNotifications(),
-            ]);
+            try {
+                const leadRepo = new LeadRepo();
+                const taskRepo = new TaskRepo();
+                const notificationRepo = new NotificationRepo();
+                const [leads, tasks, notifications] = await Promise.all([
+                    leadRepo.getAllLeads(),
+                    taskRepo.getAllTasks(),
+                    notificationRepo.getAllNotifications(),
+                ]);
 
-            const scoringService = new ScoringService();
-            const priorityManager = new PriorityManager(scoringService);
+                const scoringService = new ScoringService();
+                const priorityManager = new PriorityManager(scoringService);
 
-            const agendaService = new AgendaService(
-                scoringService,
-                priorityManager
-            );
-
-            const systemTasks = agendaService.getMissingSystemAssignedTasksUpToDate(
-                leads,
-                tasks,
-                new Date()
-            );
-
-            for (const task of systemTasks) {
-                await taskRepo.insertTask(task);
-            }
-
-            if (active) {
-                const persistedTasks =
-                    systemTasks.length > 0
-                        ? await taskRepo.getAllTasks()
-                        : tasks;
-                const allTasks = agendaService.getUniqueTasks(persistedTasks);
-                const now = new Date();
-
-                setAgendaActivities(
-                    agendaService.getDailyActivities(
-                        allTasks,
-                        notifications,
-                        selectedDate
-                    )
+                const agendaService = new AgendaService(
+                    scoringService,
+                    priorityManager
                 );
-                setCurrentTimeMs(now.getTime());
-                setTodayDateString(formatDateInput(now));
-                setPastUnfinishedTaskCounts(
-                    getPastUnfinishedTaskCounts(allTasks, formatDateInput(now))
+
+                const systemTasks = agendaService.getMissingSystemAssignedTasksUpToDate(
+                    leads,
+                    tasks,
+                    new Date()
                 );
-                setLoading(false);
+
+                for (const task of systemTasks) {
+                    if (!active) return;
+                    const error = await taskRepo.insertTask(task);
+                    if (error) throw new Error(error);
+                }
+
+                if (active) {
+                    const persistedTasks =
+                        systemTasks.length > 0
+                            ? await taskRepo.getAllTasks()
+                            : tasks;
+                    if (!active) return;
+                    const allTasks = agendaService.getUniqueTasks(persistedTasks);
+                    const now = new Date();
+
+                    setAgendaActivities(
+                        agendaService.getDailyActivities(
+                            allTasks,
+                            notifications,
+                            selectedDate
+                        )
+                    );
+                    setCurrentTimeMs(now.getTime());
+                    setTodayDateString(formatDateInput(now));
+                    setPastUnfinishedTaskCounts(
+                        getPastUnfinishedTaskCounts(allTasks, formatDateInput(now))
+                    );
+                    setReadError(false);
+                }
+            } catch {
+                if (active) setReadError(true);
+            } finally {
+                if (active) setLoading(false);
             }
         }
 
@@ -178,12 +191,20 @@ export default function AgendaPage() {
         const timer = window.setTimeout(async () => {
             setLeadSearchLoading(true);
 
-            const leadRepo = new LeadRepo();
-            const results = await leadRepo.searchLeads(query, 6);
-
-            if (active) {
-                setLeadSearchResults(results);
-                setLeadSearchLoading(false);
+            try {
+                const leadRepo = new LeadRepo();
+                const results = await leadRepo.searchLeads(query, 6);
+                if (active) {
+                    setLeadSearchResults(results);
+                    setLeadSearchError(false);
+                }
+            } catch {
+                if (active) {
+                    setLeadSearchResults([]);
+                    setLeadSearchError(true);
+                }
+            } finally {
+                if (active) setLeadSearchLoading(false);
             }
         }, 250);
 
@@ -191,7 +212,7 @@ export default function AgendaPage() {
             active = false;
             window.clearTimeout(timer);
         };
-    }, [leadSearchText, selectedLead]);
+    }, [leadSearchText, selectedLead, searchRefreshKey]);
 
     function changeDate(days: number) {
         const nextDate = new Date(selectedDate);
@@ -206,6 +227,9 @@ export default function AgendaPage() {
 
     function handleLeadSearchChange(value: string) {
         setLeadSearchText(value);
+        setLeadSearchResults([]);
+        setLeadSearchError(false);
+        setLeadSearchLoading(value.trim().length >= 2);
         setSelectedLead(null);
         setCreateError(null);
 
@@ -249,21 +273,25 @@ export default function AgendaPage() {
             taskType,
             newTaskNotes.trim()
         );
-        const error = await taskRepo.insertTask(task);
+        try {
+            const error = await taskRepo.insertTask(task);
 
-        if (error) {
-            setCreateError(error);
+            if (error) {
+                setCreateError(error);
+                return;
+            }
+
+            setNewTaskType("");
+            setNewTaskNotes("");
+            setLeadSearchText("");
+            setSelectedLead(null);
+            setLeadSearchResults([]);
+            setRefreshKey((currentKey) => currentKey + 1);
+        } catch {
+            setCreateError("Unable to create the task. Check your connection and try again.");
+        } finally {
             setCreatingTask(false);
-            return;
         }
-
-        setCreatingTask(false);
-        setNewTaskType("");
-        setNewTaskNotes("");
-        setLeadSearchText("");
-        setSelectedLead(null);
-        setLeadSearchResults([]);
-        setRefreshKey((currentKey) => currentKey + 1);
     }
 
     async function handleToggleTask(activity: AgendaActivity) {
@@ -275,6 +303,7 @@ export default function AgendaPage() {
             return;
         }
 
+        setCreateError(null);
         setTogglingTaskIds((currentIds) => [...currentIds, activity.id]);
 
         if (activity.id < 0) {
@@ -285,59 +314,59 @@ export default function AgendaPage() {
             return;
         }
 
-        const nextCompleted = !activity.completed;
-        const taskRepo = new TaskRepo();
-        const error = await taskRepo.updateTaskCompletion(
-            activity.id,
-            nextCompleted
-        );
-
-        if (error) {
-            setCreateError(error);
-            setTogglingTaskIds((currentIds) =>
-                currentIds.filter((taskId) => taskId !== activity.id)
+        try {
+            const nextCompleted = !activity.completed;
+            const taskRepo = new TaskRepo();
+            const error = await taskRepo.updateTaskCompletion(
+                activity.id,
+                nextCompleted
             );
-            return;
+
+            if (error) {
+                setCreateError(error);
+                return;
+            }
+
+            setAgendaActivities((currentActivities) =>
+                currentActivities.map((currentActivity) =>
+                    isSameTaskActivity(currentActivity, activity)
+                        ? {
+                              ...currentActivity,
+                              completed: nextCompleted,
+                          }
+                        : currentActivity
+                )
+            );
+
+            setPastUnfinishedTaskCounts((currentCounts) => {
+                const taskDateString = formatDateInput(activity.date);
+
+                if (!todayDateString || taskDateString >= todayDateString) {
+                    return currentCounts;
+                }
+
+                const currentCount = currentCounts[taskDateString] ?? 0;
+                const nextCount = activity.completed
+                    ? currentCount + 1
+                    : Math.max(0, currentCount - 1);
+
+                if (nextCount === 0) {
+                    const nextCounts = { ...currentCounts };
+                    delete nextCounts[taskDateString];
+                    return nextCounts;
+                }
+
+                return {
+                    ...currentCounts,
+                    [taskDateString]: nextCount,
+                };
+            });
+
+        } catch {
+            setCreateError("Unable to update the task. Check your connection and try again.");
+        } finally {
+            setTogglingTaskIds((currentIds) => currentIds.filter((taskId) => taskId !== activity.id));
         }
-
-        setAgendaActivities((currentActivities) =>
-            currentActivities.map((currentActivity) =>
-                isSameTaskActivity(currentActivity, activity)
-                    ? {
-                          ...currentActivity,
-                          completed: nextCompleted,
-                      }
-                    : currentActivity
-            )
-        );
-
-        setPastUnfinishedTaskCounts((currentCounts) => {
-            const taskDateString = formatDateInput(activity.date);
-
-            if (!todayDateString || taskDateString >= todayDateString) {
-                return currentCounts;
-            }
-
-            const currentCount = currentCounts[taskDateString] ?? 0;
-            const nextCount = activity.completed
-                ? currentCount + 1
-                : Math.max(0, currentCount - 1);
-
-            if (nextCount === 0) {
-                const nextCounts = { ...currentCounts };
-                delete nextCounts[taskDateString];
-                return nextCounts;
-            }
-
-            return {
-                ...currentCounts,
-                [taskDateString]: nextCount,
-            };
-        });
-
-        setTogglingTaskIds((currentIds) =>
-            currentIds.filter((taskId) => taskId !== activity.id)
-        );
     }
 
     return (
@@ -419,14 +448,22 @@ export default function AgendaPage() {
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                             />
 
+                            {leadSearchError && !selectedLead ? (
+                                <ReadError resource="lead search results" pending={leadSearchLoading} onRetry={() => setSearchRefreshKey((key) => key + 1)} />
+                            ) : null}
+
                             {leadSearchText.trim().length >= 2 &&
                             !selectedLead &&
-                            (leadSearchLoading || leadSearchResults.length > 0) ? (
+                            !leadSearchError ? (
                                 <div className="absolute z-10 mt-2 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
                                     {leadSearchLoading ? (
                                         <div className="px-3 py-2 text-sm text-slate-500">
                                             Searching leads...
                                         </div>
+                                    ) : null}
+
+                                    {!leadSearchLoading && leadSearchResults.length === 0 ? (
+                                        <p className="px-3 py-2 text-sm text-slate-500">No matching leads.</p>
                                     ) : null}
 
                                     {!leadSearchLoading
@@ -546,30 +583,38 @@ export default function AgendaPage() {
                 ) : null}
 
                 {createError ? (
-                    <p className="mt-3 text-sm font-medium text-red-600">
+                    <p role="alert" className="mt-3 text-sm font-medium text-red-600">
                         {createError}
                     </p>
                 ) : null}
             </section>
 
-            <AgendaCalendar
-                selectedDate={selectedDate}
-                onSelectDate={selectAgendaDate}
-                unfinishedTaskCount={
-                    loading ? 0 : getUnfinishedTaskCount(agendaActivities)
-                }
-                pastUnfinishedTaskCounts={pastUnfinishedTaskCounts}
-                todayDateString={todayDateString}
-            />
+            {readError ? (
+                <ReadError resource="agenda" pending={loading} onRetry={() => setRefreshKey((key) => key + 1)} />
+            ) : loading ? (
+                <p role="status" className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">Loading agenda...</p>
+            ) : (
+                <>
+                    <AgendaCalendar
+                        selectedDate={selectedDate}
+                        onSelectDate={selectAgendaDate}
+                        unfinishedTaskCount={
+                            getUnfinishedTaskCount(agendaActivities)
+                        }
+                        pastUnfinishedTaskCounts={pastUnfinishedTaskCounts}
+                        todayDateString={todayDateString}
+                    />
 
-            <AgendaActivityPanel
-                selectedDate={selectedDate}
-                agendaActivities={loading ? [] : agendaActivities}
-                loading={loading}
-                currentTimeMs={currentTimeMs}
-                togglingTaskIds={togglingTaskIds}
-                onToggleTask={handleToggleTask}
-            />
+                    <AgendaActivityPanel
+                        selectedDate={selectedDate}
+                        agendaActivities={agendaActivities}
+                        loading={loading}
+                        currentTimeMs={currentTimeMs}
+                        togglingTaskIds={togglingTaskIds}
+                        onToggleTask={handleToggleTask}
+                    />
+                </>
+            )}
         </div>
     );
 }
