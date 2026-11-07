@@ -76,7 +76,7 @@ describe("DB — repository mapping and failure contracts", () => {
         const db = scriptedClient([{ data: [
             { notification_id: 1, lead_id: null, title: null, date: "2026-06-20T14:30:00Z" },
             { notification_id: 2, lead_id: 7, title: "Incoming call", date: "2026-06-20T15:30:00Z" },
-        ] }]);
+        ] }, { data: [] }]);
         const result = await new NotificationRepo(db.client).getAllNotifications();
         expect(result[0].getLead()).toBeNull();
         expect(result[0].getTitle()).toBe("");
@@ -121,11 +121,11 @@ describe("DB — repository mapping and failure contracts", () => {
         if (method === "searchTrims") expect(db.queries[0].ilike).toHaveBeenCalledWith("model", "RAV4");
     });
 
-    it("DB-ERR-01: read failures follow the empty/null repository contract", async () => {
+    it("DB-ERR-01: collection failures reject; other read contracts are unchanged", async () => {
         const db = scriptedClient(Array.from({ length: 6 }, () => ({ error: { message: "Unavailable" } })));
-        expect(await new LeadRepo(db.client).getAllLeads()).toEqual([]);
+        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Unavailable");
         expect(await new LeadRepo(db.client).getLeadById(1)).toBeNull();
-        expect(await new NotificationRepo(db.client).getAllNotifications()).toEqual([]);
+        await expect(new NotificationRepo(db.client).getAllNotifications()).rejects.toThrow("Unavailable");
         expect(await new NotificationRepo(db.client).getNotificationById(1)).toBeNull();
         expect(await new VehicleRepo(db.client).getAllVehicles()).toEqual([]);
         expect(await new VehicleRepo(db.client).getVehicleById(1)).toBeNull();
