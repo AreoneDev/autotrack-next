@@ -47,7 +47,7 @@ test("E2E-DETAIL-01: cancel, failed save, retry and reload preserve lead fields"
     await refreshed(page, () => page.getByRole("button", { name: "Save Changes", exact: true }).click());
     await expect(page.getByRole("button", { name: "Modify", exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByText("Lost", { exact: true })).toBeVisible();
+    await expect(page.getByText("Closed (outcome unconfirmed)", { exact: true })).toBeVisible();
     expect((await state(request)).leads[0]).toMatchObject({ stage: "CLOSED", status: false, first_name: "Updated" });
 });
 

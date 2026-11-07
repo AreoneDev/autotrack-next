@@ -16,6 +16,14 @@ describe("DashboardService", () => {
         return new DashboardService(scoringService, agendaService);
     };
 
+    test("unavailable tracking is null; only explicit inbound records count", () => {
+        const service = createService();
+        const now = new Date("2026-11-07T16:00:00Z");
+        expect(service.getDashboardData([], [], [], now).metrics.unrepliedMessageCount).toBeNull();
+        expect(service.getDashboardData([], [], [], now, []).metrics.unrepliedMessageCount).toBe(0);
+        expect(service.getDashboardData([], [], [], now, [{ notification_id: 1, lead_id: 7, title: "Customer reply", date: "2026-11-07T12:00:00Z", contact_direction: "inbound", replied_at: null }]).metrics.unrepliedMessageCount).toBe(1);
+    });
+
     beforeEach(() => {
         jest.useFakeTimers();
         jest.setSystemTime(new Date("2026-06-20"));

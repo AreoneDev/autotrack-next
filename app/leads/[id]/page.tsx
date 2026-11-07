@@ -1,3 +1,5 @@
+import MessageReplyPanel from "@/components/leads/MessageReplyPanel";
+import { MessageReplyRepo } from "@/lib/persistence/real/supabase/MessageReplyRepo";
 import Link from "next/link";
 import { localDateInput } from "@/lib/date";
 import { requireServerClient } from "@/lib/supabase/server";
@@ -172,6 +174,7 @@ export default async function LeadDetailPage({
             notificationRepository.getNotificationsByLeadId(lead.leadID),
         ]);
 
+    const replyResult = await new MessageReplyRepo(client).getRecords(lead.leadID);
     const persistedLeadTasks = leadTasks;
 
     lead.vehicleInterest = vehicleInterest;
@@ -195,6 +198,7 @@ export default async function LeadDetailPage({
                 )}
                 notifications={leadNotifications.map(toNotificationViewModel)}
             />
+            <MessageReplyPanel result={replyResult} referenceTime={new Date().toISOString()} />
         </div>
     );
 }

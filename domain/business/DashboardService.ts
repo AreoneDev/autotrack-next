@@ -1,3 +1,4 @@
+import { summarizeMessageReplies, type MessageReplyRecord } from "@/domain/business/MessageReplyService";
 import { AgendaService } from "@/domain/business/AgendaService";
 import {
     RecentActivityItem,
@@ -7,6 +8,7 @@ import {
 } from "@/domain/business/RecentActivityService";
 import { ScoringService } from "@/domain/business/ScoringService";
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, leadOutcomeLabels } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 
@@ -57,7 +59,7 @@ export type DashboardRecentActivityItem = RecentActivityItem;
 export type DashboardMetrics = {
     todayTaskCount: number;
     highPriorityLeadCount: number;
-    unrepliedMessageCount: number;
+    unrepliedMessageCount: number | null;
     overdueTaskCount: number;
 };
 
@@ -88,7 +90,8 @@ export class DashboardService {
         leads: Lead[],
         tasks: Task[],
         notifications: Notification[],
-        targetDate: Date
+        targetDate: Date,
+        replyRecords: MessageReplyRecord[] | null = null
     ): DashboardData {
         const todayTasks = this.getTodayTasks(tasks, leads, targetDate);
         const overdueTasks = this.getOverdueTasks(tasks, targetDate);
@@ -110,8 +113,8 @@ export class DashboardService {
             metrics: {
                 todayTaskCount: todayTasks.length,
                 highPriorityLeadCount: highPriorityLeads.length,
-                // TODO: Replace with NotificationRepository or message activity tracking once inbound message state exists.
-                unrepliedMessageCount: 0,
+                // Only explicit inbound records count; missing tracking is not an empty inbox.
+                unrepliedMessageCount: replyRecords === null ? null : summarizeMessageReplies(replyRecords, targetDate).pending,
                 overdueTaskCount: overdueTasks.length,
             },
             todayTasks,
@@ -184,7 +187,7 @@ export class DashboardService {
             })
             .filter(
                 ({ lead, priority }) =>
-                    lead.status &&
+                    lead.isActive() &&
                     priority.level !== "CLOSED" &&
                     priority.score >= this.highPriorityThreshold
             )
@@ -220,7 +223,7 @@ export class DashboardService {
             lead.updateScore(priority.score);
 
             if (
-                !lead.status ||
+                !lead.isActive() ||
                 priority.level === "CLOSED" ||
                 priority.score < this.highPriorityThreshold
             ) {
@@ -358,7 +361,7 @@ export class DashboardService {
             })
             .filter(
                 ({ lead, priorityLevel, score }) =>
-                    lead.status &&
+                    lead.isActive() &&
                     priorityLevel !== "CLOSED" &&
                     score > 0
             )
@@ -426,7 +429,7 @@ export class DashboardService {
                 lead.vehicleInterest?.getFullDescription() ??
                 "No vehicle interest listed",
             stage: lead.stage,
-            status: lead.status ? "Active" : "Lost",
+            status: leadOutcomeLabels[getLeadOutcome(lead)],
             score: Math.floor(candidate.score),
             priorityLevel: candidate.priorityLevel,
             nextFollowUpDate: candidate.nextFollowUpDate

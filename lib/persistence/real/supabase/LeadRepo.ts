@@ -1,5 +1,6 @@
 import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
+import { leadStateForWrite } from "@/domain/objects/LeadOutcome";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { VehicleSelection } from "@/domain/business/VehicleSelectionService";
@@ -74,6 +75,7 @@ function mapRowToLead(row: LeadRow): Lead {
 }
 
 function mapLeadDetailsToRow(lead: Lead): LeadDetailsRow {
+    const state = leadStateForWrite(lead);
     return {
         first_name: lead.firstName,
         last_name: lead.lastName,
@@ -86,11 +88,11 @@ function mapLeadDetailsToRow(lead: Lead): LeadDetailsRow {
         lead_country: lead.leadCountry,
         lead_postal_code: lead.leadPostalCode,
         budget: lead.budget,
-        stage: lead.stage,
+        stage: state.stage,
         follow_up_date: lead.followUpDate.toISOString(),
-        score: lead.score,
+        score: state.status ? lead.score : 0,
         notes: lead.notes,
-        status: lead.status,
+        status: state.status,
     };
 }
 
