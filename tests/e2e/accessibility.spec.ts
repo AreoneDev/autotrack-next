@@ -36,7 +36,8 @@ async function createLead(page: Page) {
 
 async function createTask(page: Page) {
     await page.getByRole("link", { name: "A11y Customer", exact: true }).click();
-    await page.getByRole("combobox", { name: "New task type", exact: true }).selectOption("Follow-up");
+    await page.getByRole("combobox", { name: "New task type", exact: true }).click();
+    await page.getByRole("option", { name: "Follow-up", exact: true }).click();
     await page.getByLabel("New task notes", { exact: true }).fill("Synthetic accessibility task");
     await refreshed(page, () => page.getByRole("button", { name: "Add", exact: true }).click());
     await expect(page.getByRole("button", { name: "Edit task Follow-up", exact: true })).toBeVisible();
@@ -198,4 +199,34 @@ test("A11Y-05: calendar has one day tab stop and arrow keys cross month boundari
     await expect(calendar.locator('button[aria-pressed][tabindex="0"]')).toHaveCount(1);
     for (const name of ["Lead", "Task type", "Task date", "Task time", "Short Description / Notes"]) await expect(page.getByLabel(name, { exact: true })).toBeVisible();
     await scan(page, info, "calendar-navigation");
+});
+
+test("A11Y-06: narrow agenda controls and date picker fit the viewport", async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile-chromium", "Checks the narrow mobile layout");
+    await page.setViewportSize({ width: 320, height: 700 });
+    await signIn(page);
+    await page.goto("/agenda");
+    for (const locator of [
+        page.getByRole("heading", { name: "Agenda", exact: true }),
+        page.getByRole("button", { name: "Sign out", exact: true }),
+        page.getByRole("button", { name: "Previous day", exact: true }),
+        page.getByLabel("Agenda date", { exact: true }),
+        page.getByRole("button", { name: "Next day", exact: true }),
+        page.getByRole("button", { name: "Back to Today", exact: true }),
+        page.getByRole("button", { name: "Refresh", exact: true }),
+    ]) {
+        const box = await locator.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+    }
+    const previous = await page.getByRole("button", { name: "Previous day" }).boundingBox();
+    const next = await page.getByRole("button", { name: "Next day" }).boundingBox();
+    expect(previous!.y).toBeCloseTo(next!.y, 0);
+    await page.getByRole("button", { name: "Choose date" }).first().click();
+    const popup = page.locator('[data-slot="popover-content"]');
+    await expect(popup).toBeVisible();
+    const box = await popup.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320);
 });

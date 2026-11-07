@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MouseEvent, useState } from "react";
@@ -177,7 +178,7 @@ export default function DashboardTaskCard({ task }: DashboardTaskCardProps) {
                 </div>
             )}
 
-            <button
+            <Button variant="ghost"
                 type="button"
                 onClick={toggleTaskCompletion}
                 onMouseDown={(event) => {
@@ -196,7 +197,7 @@ export default function DashboardTaskCard({ task }: DashboardTaskCardProps) {
                     <Circle size={15} />
                 )}
                 {completed ? "Completed" : "Complete"}
-            </button>
+            </Button>
         </article>
     );
 }

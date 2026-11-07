@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
     Bell,
@@ -182,7 +183,7 @@ export default function AgendaActivityPanel({
                                 )}
 
                                 {isTask ? (
-                                    <button
+                                    <Button variant="ghost"
                                         type="button"
                                         disabled={toggling}
                                         onMouseDown={(event) => {
@@ -209,7 +210,7 @@ export default function AgendaActivityPanel({
                                               : isOverdue(activity)
                                                 ? "Overdue"
                                                 : "Uncompleted"}
-                                    </button>
+                                    </Button>
                                 ) : (
                                     <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                                         Notification

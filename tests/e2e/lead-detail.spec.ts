@@ -21,7 +21,8 @@ test("E2E-DETAIL-01: cancel, failed save, retry and reload preserve lead fields"
     await page.getByLabel("Email", { exact: true }).fill("updated@example.test");
     await page.getByLabel("Phone", { exact: true }).fill("4165550199");
     await page.getByLabel("Budget", { exact: true }).fill("42000");
-    await page.getByRole("combobox", { name: "Stage", exact: true }).selectOption("NEGOTIATION");
+    await page.getByRole("combobox", { name: "Stage", exact: true }).click();
+    await page.getByRole("option", { name: "NEGOTIATION", exact: true }).click();
     await page.getByLabel("Follow-up Date", { exact: true }).fill(day(3));
     await page.getByRole("textbox", { name: "Notes", exact: true }).fill("Customer requested a quotation.");
     await failNext(request, "leads", "PATCH");
@@ -37,11 +38,12 @@ test("E2E-DETAIL-01: cancel, failed save, retry and reload preserve lead fields"
     await expect(page.getByLabel("First Name", { exact: true })).toHaveValue("Updated");
     await expect(page.getByLabel("Phone", { exact: true })).toHaveValue("4165550199");
     await expect(page.getByLabel("Budget", { exact: true })).toHaveValue("42000");
-    await expect(page.getByRole("combobox", { name: "Stage", exact: true })).toHaveValue("NEGOTIATION");
+    await expect(page.getByRole("combobox", { name: "Stage", exact: true })).toContainText("NEGOTIATION");
     await expect(page.getByLabel("Follow-up Date", { exact: true })).toHaveValue(day(3));
     await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue("Customer requested a quotation.");
     expect((await state(request)).leads).toHaveLength(1);
-    await page.getByRole("combobox", { name: "Stage", exact: true }).selectOption("CLOSED");
+    await page.getByRole("combobox", { name: "Stage", exact: true }).click();
+    await page.getByRole("option", { name: "CLOSED", exact: true }).click();
     await refreshed(page, () => page.getByRole("button", { name: "Save Changes", exact: true }).click());
     await expect(page.getByRole("button", { name: "Modify", exact: true })).toBeVisible();
     await page.reload();
@@ -76,3 +78,18 @@ test("E2E-DETAIL-03: unknown lead offers a working route back to the list", asyn
     await expect(page).toHaveURL("/leads");
     await expect(page.getByRole("link", { name: "Journey Customer", exact: true })).toBeVisible();
 });
+
+for (const table of ["lead_vehicle_interests", "lead_trade_in_vehicles"]) {
+    test(`vehicle association failure after lead update: ${table}`, async ({ page, request }) => {
+        await page.getByRole("button", { name: "Modify", exact: true }).click();
+        await page.getByLabel("First Name", { exact: true }).fill("Partially Saved");
+        await failNext(request, table, "DELETE");
+        await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+
+        await expect(page.getByText("Synthetic write failure", { exact: true })).toBeVisible();
+        await expect(page.getByLabel("First Name", { exact: true })).toHaveValue("Partially Saved");
+        expect((await state(request)).leads[0].first_name).toBe("Partially Saved");
+        await page.reload();
+        await expect(page.getByRole("heading", { name: "Partially Saved Customer", exact: true })).toBeVisible();
+    });
+}

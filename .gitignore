@@ -46,6 +46,7 @@ next-env.d.ts
 /lib/persistence/real/supabase/migrations
 package-lock.json
 *.json
+!/components.json
 
 /nfr-reports/
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -29,8 +30,8 @@ export default function AccountMenu() {
         } finally { setBusy(false); }
     }
     return <div className="min-w-0 text-sm">
-        <p className="max-w-48 truncate text-slate-700" title={email}>{email || "AutoTrack account"}</p>
-        <button type="button" onClick={signOut} disabled={busy} className="mt-1 text-blue-700 disabled:opacity-50">{busy ? "Signing out…" : "Sign out"}</button>
+        <p className="hidden max-w-48 truncate text-slate-700 sm:block" title={email}>{email || "AutoTrack account"}</p>
+        <Button variant="ghost" type="button" onClick={signOut} disabled={busy} className="text-blue-700 disabled:opacity-50 sm:mt-1">{busy ? "Signing out…" : "Sign out"}</Button>
         {error && <p role="alert" className="text-red-700">{error}</p>}
     </div>;
 }

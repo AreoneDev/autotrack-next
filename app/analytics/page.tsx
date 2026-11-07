@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
     Activity,
     CalendarCheck,
@@ -289,16 +290,16 @@ function LineChartCard({
                     ))}
                 </svg>
             </div>
-            <table className="sr-only">
+            <Table className="sr-only">
                 <caption>{title} data</caption>
-                <thead><tr><th scope="col">Period</th><th scope="col">Value</th></tr></thead>
-                <tbody>{data.map((point) => (
-                    <tr key={point.period}>
-                        <th scope="row">{point.period}</th>
-                        <td>{point.value}{valueSuffix}</td>
-                    </tr>
-                ))}</tbody>
-            </table>
+                <TableHeader><TableRow><TableHead scope="col">Period</TableHead><TableHead scope="col">Value</TableHead></TableRow></TableHeader>
+                <TableBody>{data.map((point) => (
+                    <TableRow key={point.period}>
+                        <TableHead scope="row">{point.period}</TableHead>
+                        <TableCell>{point.value}{valueSuffix}</TableCell>
+                    </TableRow>
+                ))}</TableBody>
+            </Table>
         </div>
     );
 }

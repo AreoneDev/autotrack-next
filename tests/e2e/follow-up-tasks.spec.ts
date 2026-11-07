@@ -8,14 +8,15 @@ test("E2E-TASK-01: validate, create, edit, complete, reopen and delete with fail
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Task type is required.", { exact: true })).toBeVisible();
     expect((await state(request)).tasks).toHaveLength(0);
-    await page.getByLabel("New task type", { exact: true }).selectOption("Follow-up");
+    await page.getByLabel("New task type", { exact: true }).click();
+    await page.getByRole("option", { name: "Follow-up", exact: true }).click();
     await page.getByLabel("New task date", { exact: true }).fill(day(2));
     await page.getByLabel("New task time", { exact: true }).fill("14:45");
     await page.getByPlaceholder("Short notes or description", { exact: true }).fill("Confirm preferred vehicle.");
     await failNext(request, "tasks", "POST");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Synthetic write failure", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("New task type", { exact: true })).toHaveValue("Follow-up");
+    await expect(page.getByLabel("New task type", { exact: true })).toContainText("Follow-up");
     expect((await state(request)).tasks).toHaveLength(0);
     await refreshed(page, () => page.getByRole("button", { name: "Add", exact: true }).click());
     await expect(page.getByText("Confirm preferred vehicle.", { exact: true })).toBeVisible();
