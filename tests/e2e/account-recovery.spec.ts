@@ -48,7 +48,11 @@ test("invalid callback and fragment errors keep confirmation resend available", 
     await page.goto("/auth/callback?error=access_denied&error_code=otp_expired&error_description=untrusted");
     await expect(page.getByRole("main").getByRole("alert")).toContainText("expired");
     await page.getByRole("link", { name: "Resend confirmation email" }).click();
-    await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
+    await expect(page).toHaveURL("/resend-confirmation");
+    await page.waitForLoadState("networkidle");
+    const email = page.getByLabel("Email", { exact: true });
+    await email.fill("ada@example.test");
+    await expect(email).toHaveValue("ada@example.test");
     await page.getByRole("button", { name: "Resend confirmation email" }).click();
     await expect(page.getByRole("status")).toContainText("If this email has an account awaiting confirmation");
     await expect(page.getByRole("button", { name: /Try again in/ })).toBeDisabled();
