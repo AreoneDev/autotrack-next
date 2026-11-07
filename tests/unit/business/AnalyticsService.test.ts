@@ -52,11 +52,23 @@ describe("AN — analytics rules (equivalence partitions, boundaries, decision t
         expect(result.leadQuality.hotLeadRatio.numerator).toBe(1);
     });
 
+    it("inactive and terminal leads cannot qualify as hot through stale stored scores", () => {
+        const result = service.getAnalyticsSummary([
+            makeLead({ status: false, stage: "NEGOTIATION", score: 200 }),
+            makeLead({ leadID: 2, stage: "DELIVERED", score: 200 }),
+            makeLead({ leadID: 3, stage: "CLOSED", score: 200 }),
+        ], [], []);
+        expect(result.leadQuality.hotLeadRatio.numerator).toBe(0);
+        expect(result.hotLeadsTrend.map((point) => point.count)).toEqual([0]);
+    });
+
     it.each([
         [true, "NEW", 100, 0],
         [false, "NEW", 0, 0],
         [true, "delivered", 0, 100],
-        [false, "CLOSED", 0, 100],
+        [false, "CLOSED", 0, 0],
+        [true, " CLOSED ", 0, 0],
+        [false, " delivered ", 0, 100],
     ])("AN-06: active=%s stage=%s", (status, stage, active, delivered) => {
         const result = service.getAnalyticsSummary([makeLead({ status, stage })], [], []);
         expect(result.leadQuality.activeLeadRatio.percentage).toBe(active);
@@ -103,7 +115,7 @@ describe("AN — analytics rules (equivalence partitions, boundaries, decision t
             makeLead({ leadID: 2, createdAt: new Date(2025, 11, 31), stage: "CLOSED" }),
             makeLead({ leadID: 3, createdAt: new Date(2026, 0, 31), stage: "DELIVERED" }),
         ], [], []);
-        expect(result.salesClosingRateTrend.map((point) => point.rate)).toEqual([100, 50]);
+        expect(result.salesClosingRateTrend.map((point) => point.rate)).toEqual([0, 50]);
         expect(result.hotLeadsTrend.map((point) => point.count)).toEqual([0, 1]);
         expect(result.salesClosingRateTrend[0].period).toMatch(/Dec.*2025/);
         expect(result.salesClosingRateTrend[1].period).toMatch(/Jan.*2026/);

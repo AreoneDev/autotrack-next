@@ -1,5 +1,6 @@
 import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
+import { leadStateForWrite } from "@/domain/objects/LeadOutcome";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -70,6 +71,7 @@ function mapRowToLead(row: LeadRow): Lead {
 }
 
 function mapLeadToRow(lead: Lead): LeadInsertRow {
+    const state = leadStateForWrite(lead);
     const row: LeadInsertRow = {
         first_name: lead.firstName,
         last_name: lead.lastName,
@@ -82,14 +84,14 @@ function mapLeadToRow(lead: Lead): LeadInsertRow {
         lead_country: lead.leadCountry,
         lead_postal_code: lead.leadPostalCode,
         budget: lead.budget,
-        stage: lead.stage,
+        stage: state.stage,
         follow_up_date: lead.followUpDate.toISOString(),
-        score: lead.score,
+        score: state.status ? lead.score : 0,
         notes: lead.notes,
         created_at: lead.createdAt.toISOString(),
         last_interaction_date: lead.lastInteractionDate?.toISOString() ?? null,
         last_interaction_by: lead.lastInteractionBy,
-        status: lead.status,
+        status: state.status,
     };
 
     if (lead.leadID !== 0) {

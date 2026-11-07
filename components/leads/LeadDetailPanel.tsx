@@ -36,6 +36,7 @@ import {
     VehicleSelectionService,
 } from "@/domain/business/VehicleSelectionService";
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, isTerminalLeadStage, leadOutcomeLabels, leadStateAfterStageChange, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 import { Vehicle } from "@/domain/objects/Vehicle";
@@ -110,8 +111,10 @@ const stageOptions = [
     "NEW",
     "CONTACTED",
     "VISITED",
+    "APPOINTMENT",
     "TEST_DRIVE",
     "NEGOTIATION",
+    "DELIVERED",
     "CLOSED",
 ];
 
@@ -415,10 +418,7 @@ export default function LeadDetailPanel({
             const leadRepository = new LeadRepo();
             const normalizedDraftLead = {
                 ...draftLead,
-                status:
-                    draftLead.stage.toUpperCase() === "CLOSED"
-                        ? false
-                        : draftLead.status,
+                ...leadStateForWrite(draftLead),
             };
             const leadToSave = createLeadFromViewModel(normalizedDraftLead);
             const priority = scoringService.calculatePriority(leadToSave);
@@ -887,7 +887,7 @@ export default function LeadDetailPanel({
                     <div className="rounded-lg bg-slate-50 p-4">
                         <p className="text-sm font-medium text-slate-500">Stage</p>
                         <p className="mt-2 text-xl font-bold text-slate-950">
-                            {currentLead.stage}
+                            {normalizeLeadStage(currentLead.stage)}
                         </p>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-4">
@@ -913,20 +913,24 @@ export default function LeadDetailPanel({
                                           : "bg-slate-100 text-slate-600"
                             }`}
                         >
-                            {currentLead.priorityLevel}
+                            {currentLead.priorityLevel === "CLOSED" ? "Inactive" : currentLead.priorityLevel}
                         </p>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-4">
                         <p className="text-sm font-medium text-slate-500">Status</p>
                         <p
                             className={`mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${
-                                currentLead.status
+                                getLeadOutcome(currentLead) === "ACTIVE"
                                     ? "bg-green-50 text-green-700"
-                                    : "bg-red-50 text-red-700"
+                                    : getLeadOutcome(currentLead) === "LOST"
+                                      ? "bg-red-50 text-red-700"
+                                      : getLeadOutcome(currentLead) === "DELIVERED"
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "bg-slate-100 text-slate-600"
                             }`}
                         >
                             <Check size={14} />
-                            {currentLead.status ? "Active" : "Lost"}
+                            {leadOutcomeLabels[getLeadOutcome(currentLead)]}
                         </p>
                     </div>
                 </div>
@@ -993,10 +997,11 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Stage
                             <SelectField
-                                value={draftLead.stage}
-                                onValueChange={(event) =>
-                                    updateDraft("stage", event)
-                                }
+                                value={normalizeLeadStage(draftLead.stage)}
+                                onValueChange={(stage) => setDraftLead((previous) => ({
+                                    ...previous,
+                                    ...leadStateAfterStageChange(previous, stage),
+                                }))}
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             >
                                 {stageOptions.map((stage) => (
@@ -1009,7 +1014,10 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Status
                             <SelectField
-                                value={draftLead.status ? "ACTIVE" : "LOST"}
+                                aria-label="Status"
+                                value={getLeadOutcome(draftLead)}
+                                disabled={isTerminalLeadStage(draftLead.stage)}
+                                aria-describedby="lead-outcome-help"
                                 onValueChange={(event) =>
                                     updateDraft(
                                         "status",
@@ -1020,7 +1028,14 @@ export default function LeadDetailPanel({
                             >
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="LOST">Lost</SelectItem>
+                                {isTerminalLeadStage(draftLead.stage) && (
+                                    <SelectItem value={getLeadOutcome(draftLead)}>{leadOutcomeLabels[getLeadOutcome(draftLead)]}</SelectItem>
+                                )}
                             </SelectField>
+                            <span id="lead-outcome-help" className="mt-2 block text-xs text-slate-500">
+                                DELIVERED records a sale. CLOSED leaves the outcome unconfirmed.
+                                Choose an open stage to reopen this lead, then select Active or Lost.
+                            </span>
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Budget

@@ -1,5 +1,6 @@
 import { ScoringService } from "@/domain/business/ScoringService";
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 
@@ -120,7 +121,7 @@ export class AnalyticsService {
                     numerator: deliveredLeads.length,
                     denominator: totalLeads,
                     description:
-                        "Leads marked as delivered or closed in the sales pipeline.",
+                        "Delivered leads divided by all leads. Lost and unconfirmed closed leads remain in the denominator; only delivered leads count as deals.",
                 }),
             },
             leadQuality: {
@@ -129,7 +130,7 @@ export class AnalyticsService {
                     numerator: activeLeads.length,
                     denominator: totalLeads,
                     description:
-                        "Leads that are not lost and not delivered.",
+                        "Active leads, excluding lost, delivered and unconfirmed closed leads.",
                 }),
                 hotLeadRatio: this.createRatioMetric({
                     label: "Hot Lead Ratio",
@@ -321,6 +322,10 @@ export class AnalyticsService {
     }
 
     private getLeadScore(lead: Lead): number {
+        if (!this.isActiveLead(lead)) {
+            return 0;
+        }
+
         return Math.max(lead.score, this.scoringService.calculateScore(lead));
     }
 
@@ -392,12 +397,11 @@ export class AnalyticsService {
     }
 
     private isActiveLead(lead: Lead): boolean {
-        return lead.status && !this.isDelivered(lead);
+        return lead.isActive();
     }
 
     private isDelivered(lead: Lead): boolean {
-        const stage = lead.stage.toUpperCase();
-        return stage === "DELIVERED" || stage === "CLOSED";
+        return getLeadOutcome(lead) === "DELIVERED";
     }
 
     private isAppointmentText(value: string): boolean {

@@ -8,6 +8,7 @@ import {
 } from "@/domain/business/RecentActivityService";
 import { ScoringService } from "@/domain/business/ScoringService";
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, leadOutcomeLabels } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 
@@ -186,7 +187,7 @@ export class DashboardService {
             })
             .filter(
                 ({ lead, priority }) =>
-                    lead.status &&
+                    lead.isActive() &&
                     priority.level !== "CLOSED" &&
                     priority.score >= this.highPriorityThreshold
             )
@@ -222,7 +223,7 @@ export class DashboardService {
             lead.updateScore(priority.score);
 
             if (
-                !lead.status ||
+                !lead.isActive() ||
                 priority.level === "CLOSED" ||
                 priority.score < this.highPriorityThreshold
             ) {
@@ -360,7 +361,7 @@ export class DashboardService {
             })
             .filter(
                 ({ lead, priorityLevel, score }) =>
-                    lead.status &&
+                    lead.isActive() &&
                     priorityLevel !== "CLOSED" &&
                     score > 0
             )
@@ -428,7 +429,7 @@ export class DashboardService {
                 lead.vehicleInterest?.getFullDescription() ??
                 "No vehicle interest listed",
             stage: lead.stage,
-            status: lead.status ? "Active" : "Lost",
+            status: leadOutcomeLabels[getLeadOutcome(lead)],
             score: Math.floor(candidate.score),
             priorityLevel: candidate.priorityLevel,
             nextFollowUpDate: candidate.nextFollowUpDate

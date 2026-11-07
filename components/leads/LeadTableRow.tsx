@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, isTerminalLeadStage, leadOutcomeLabels, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 
 interface LeadTableRowProps {
     lead: Lead;
@@ -24,6 +25,7 @@ export default function LeadTableRow({
     deleting,
     updatingStatus,
 }: LeadTableRowProps) {
+    const outcome = getLeadOutcome(lead);
     const formatDate = (date: Date | null | undefined): string => {
         if (!date) {
             return "N/A";
@@ -38,24 +40,28 @@ export default function LeadTableRow({
                 <div className="flex items-center gap-2">
                     <span
                         className={`h-3 w-3 rounded-full ${
-                            lead.status ? "bg-green-500" : "bg-red-500"
+                            outcome === "ACTIVE" ? "bg-green-500" : outcome === "LOST" ? "bg-red-500" : "bg-slate-500"
                         }`}
                     />
 
                     <SelectField
                         aria-label={`Status for ${lead.getLeadName()}`}
-                        value={lead.status ? "ACTIVE" : "LOST"}
+                        value={outcome}
                         onValueChange={(event) =>
                             void onStatusChange(
                                 lead.leadID,
                                 event === "ACTIVE"
                             )
                         }
-                        disabled={updatingStatus}
+                        disabled={updatingStatus || isTerminalLeadStage(lead.stage)}
+                        title={isTerminalLeadStage(lead.stage) ? "Change the stage in lead details to update this outcome." : undefined}
                         className="rounded border px-2 py-1 text-sm text-gray-900 disabled:cursor-wait disabled:bg-slate-100 disabled:text-slate-500"
                     >
                         <SelectItem value="ACTIVE">Active</SelectItem>
                         <SelectItem value="LOST">Lost</SelectItem>
+                        {isTerminalLeadStage(lead.stage) && (
+                            <SelectItem value={outcome}>{leadOutcomeLabels[outcome]}</SelectItem>
+                        )}
                     </SelectField>
                 </div>
             </TableCell>
@@ -96,7 +102,7 @@ export default function LeadTableRow({
                     : "No"}
             </TableCell>
 
-            <TableCell className="px-4 py-4">{lead.stage}</TableCell>
+            <TableCell className="px-4 py-4">{normalizeLeadStage(lead.stage)}</TableCell>
 
             <TableCell className="px-4 py-4 font-semibold">
                 {Math.floor(lead.score)}

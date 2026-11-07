@@ -6,6 +6,7 @@ The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https
 | --- | --- | --- |
 | Scoring, follow-up cadence, closed leads and DST | Boundary values, terminal states | SC; `tests/unit/business/ScoringBoundaries.test.ts` |
 | Analytics denominators, budget, scores, communication and trends | Partitions, boundaries, decision table | AN; `tests/unit/business/AnalyticsService.test.ts` |
+| Delivered vs Lost vs unconfirmed Closed, legacy booleans/case/whitespace, no read-time rewrites, stopped automatic follow-ups, retained manual tasks and explicit reopening | Cross-layer decision table, transitions, failed-save retry and reload | `tests/unit/objects/LeadOutcome.test.ts`, UI-LEAD, DB; `tests/e2e/lead-outcomes.spec.ts` |
 | Activity classification, order and relative time | Partitions, time boundaries | RA; `tests/unit/business/RecentActivityService.test.ts` |
 | Vehicle required fields, clear, save and catalog lookup | Decision table, partitions | VS; `tests/unit/business/VehicleSelectionService.test.ts` |
 | Repository mapping, paging, errors, deduplication and relationships | Boundaries, failure injection, service/repository integration | DB; `tests/integration/persistence/real/` (scripted HTTP client doubles) |
@@ -14,7 +15,7 @@ The test design follows the techniques in the [ISTQB CTFL syllabus v4.0.1](https
 | Task completion and vehicle form | Transitions, negative cases | UI-TASK, UI-VEH |
 | Calendar month lengths, leap years, six-week months | Boundaries | UI-CAL |
 | Keyboard focus, modal boundaries, announcements, names, contrast, navigation and key page states | State transitions, boundary values, representative state partitions | A11Y-01–05, A11Y-AC-01; `tests/e2e/accessibility.spec.ts`, `tests/ui/Autocomplete.test.tsx` |
-| Lead-detail cancel, failed write/retry, edited fields after reload, CLOSED → inactive status and missing lead navigation | Transitions, failure injection, partitions | E2E-DETAIL-01, E2E-DETAIL-03; `tests/e2e/lead-detail.spec.ts` |
+| Lead-detail cancel, failed write/retry, edited fields after reload, CLOSED → unconfirmed closure and missing lead navigation | Transitions, failure injection, partitions | E2E-DETAIL-01, E2E-DETAIL-03; `tests/e2e/lead-detail.spec.ts` |
 | Communication write failure/retry, exactly one notification across detail/dashboard/agenda | Transitions, cross-page persistence | E2E-DETAIL-02 |
 | Follow-up required type/title, create/edit/complete/reopen/delete, failure recovery and late-evening local dates | Decision table, transitions, date boundary | E2E-TASK-01; `tests/e2e/follow-up-tasks.spec.ts` |
 | Dashboard today/past/future and completed partitions, active/closed priority counts, completion failure/retry | Partitions, transitions, cross-page persistence | E2E-DASH-01; `tests/e2e/dashboard-agenda.spec.ts` |
