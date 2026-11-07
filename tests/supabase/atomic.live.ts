@@ -42,7 +42,7 @@ it("stale editor: the second aggregate save changes nothing", async () => {
         expect(link.error).toBeNull();
         expect(link.data).toMatchObject({ vehicle_id: 1, trim_override: saved.data.first_name });
     }
-});
+}, 120_000);
 
 it("duplicate requests and a lost-response retry commit only once", async () => {
     const row = await lead();
