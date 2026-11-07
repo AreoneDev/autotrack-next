@@ -15,9 +15,14 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
     }
 
     return (
-        <Modal labelledBy="lead-brief-title" onClose={onClose} className="w-full max-w-lg">
+        <Modal
+            labelledBy="lead-brief-title"
+            onClose={onClose}
+            className="w-full max-w-lg"
+            style={{ backgroundColor: "#ffffff", color: "#111827" }}
+        >
                 <div className="mb-4 flex items-center justify-between">
-                    <h2 id="lead-brief-title" className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
+                    <h2 id="lead-brief-title" className="text-xl font-bold">
                         Lead Brief
                     </h2>
 
@@ -30,7 +35,7 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
                     </Button>
                 </div>
 
-                <div className="space-y-3 text-sm" style={{ color: "var(--foreground)" }}>
+                <div className="space-y-3 text-sm">
                     <p><strong>Name:</strong> {lead.getLeadName()}</p>
                     <p><strong>Phone:</strong> {lead.phone || "N/A"}</p>
                     <p><strong>Email:</strong> {lead.leadEmail || "N/A"}</p>
