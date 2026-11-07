@@ -230,10 +230,11 @@ describe("Real repository and database integration", () => {
         await denied(b.db.rpc("autotrack_delete_lead", { p_lead_id: lead.lead_id }), "P0001");
         expect(await ok(a.db.from("leads").select().eq("lead_id", lead.lead_id))).toHaveLength(1);
         await denied(anonymous.rpc("autotrack_delete_lead", { p_lead_id: lead.lead_id }));
-        await ok(a.db.rpc("autotrack_delete_lead", { p_lead_id: lead.lead_id }));
+        expect(await new LeadRepo(a.db).deleteLead(Number(lead.lead_id))).toBeNull();
         for (const table of ["leads", "tasks", "notifications", ...links]) {
             expect(await ok(a.db.from(table).select().eq("lead_id", lead.lead_id))).toEqual([]);
         }
+        expect(await new LeadRepo(a.db).deleteLead(Number(lead.lead_id))).toBe("Lead not found.");
         const ids = [lead.sync_id, task.sync_id, notification.sync_id];
         expect(await ok(a.db.from("sync_deleted").select().in("sync_id", ids))).toHaveLength(3);
         expect(await ok(b.db.from("sync_deleted").select().in("sync_id", ids))).toEqual([]);

@@ -12,9 +12,11 @@ import {
     ChevronRight,
     LayoutDashboard,
     Users,
+    ArchiveRestore,
 } from "lucide-react";
 
 const navItems = [
+    { label: "Customer data", href: "/data", icon: ArchiveRestore },
     {
         label: "Dashboard",
         href: "/dashboard",

@@ -1,4 +1,5 @@
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, leadOutcomeLabels } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 
@@ -123,7 +124,7 @@ export class RecentActivityService {
                     source:
                         lead.lastInteractionBy === "LEAD" ? "lead" : "user",
                     label: "Lead activity updated",
-                    detail: `${lead.stage} lead marked ${lead.status ? "active" : "lost"}.`,
+                    detail: `${lead.stage} lead marked ${leadOutcomeLabels[getLeadOutcome(lead)].toLowerCase()}.`,
                     leadId: lead.leadID,
                     leadName: lead.getLeadName(),
                     timestamp: lead.lastInteractionDate,
