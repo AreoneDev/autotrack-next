@@ -119,8 +119,12 @@ begin
     notes = changes.notes, status = changes.status,
     -- Keep the atomic RPC's optimistic version contract explicit. The shared
     -- revision trigger sets the same old-version-plus-one value when present.
-    version = current_lead.version + 1
-    where lead_id = p_lead_id returning version into saved_version;
+    version = p_expected_version + 1
+    where lead_id = p_lead_id and version = p_expected_version
+    returning version into saved_version;
+  if not found then
+    raise exception 'This lead changed in another session. Reload before saving again.' using errcode = '40001';
+  end if;
 
   if interest is null then
     delete from public.lead_vehicle_interests where lead_id = p_lead_id;
