@@ -3,6 +3,7 @@ import Modal from "@/components/ui/Modal";
 import { X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, leadOutcomeLabels, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 
 interface LeadBriefModalProps {
     lead: Lead | null;
@@ -34,7 +35,8 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
                     <p><strong>Name:</strong> {lead.getLeadName()}</p>
                     <p><strong>Phone:</strong> {lead.phone || "N/A"}</p>
                     <p><strong>Email:</strong> {lead.leadEmail || "N/A"}</p>
-                    <p><strong>Stage:</strong> {lead.stage}</p>
+                    <p><strong>Stage:</strong> {normalizeLeadStage(lead.stage)}</p>
+                    <p><strong>Status:</strong> {leadOutcomeLabels[getLeadOutcome(lead)]}</p>
                     <p><strong>Score:</strong> {lead.score}</p>
                     <p>
                         <strong>Vehicle Interest:</strong>{" "}

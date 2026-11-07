@@ -3,6 +3,15 @@ import { makeLead, makeNotification, makeTask, referenceDate } from "@/tests/fix
 
 describe("RA — activity feed (partitions and time boundaries)", () => {
     const service = new RecentActivityService();
+    it.each([
+        ["DELIVERED", false, "delivered"], [" closed ", true, "closed (outcome unconfirmed)"],
+    ])("activity labels honor terminal stage=%s rather than boolean=%s", (stage, status, label) => {
+        const result = service.getRecentActivities({
+            leads: [makeLead({ stage, status, lastInteractionDate: referenceDate })],
+            tasks: [], notifications: [], referenceDate,
+        });
+        expect(result[0].detail).toContain(`marked ${label}.`);
+    });
     it("RA-01: empty sources yield no activities", () => {
         expect(service.getRecentActivities({ leads: [], tasks: [], notifications: [], referenceDate })).toEqual([]);
         expect(service.getTopbarNotifications({ leads: [], notifications: [], referenceDate })).toEqual([]);

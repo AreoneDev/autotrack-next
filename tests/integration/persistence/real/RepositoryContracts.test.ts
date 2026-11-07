@@ -7,6 +7,22 @@ import { scriptedClient } from "@/tests/helpers/supabase";
 jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 
 describe("DB — repository mapping and failure contracts", () => {
+    it.each([" closed ", " delivered "])("legacy %s reads remain untouched; explicit writes normalize terminal state", async (stage) => {
+        const row = { lead_id: 7, first_name: "Legacy", stage, status: true, score: 200 };
+        const db = scriptedClient([{ data: row }, { data: row }, {}]);
+        const repo = new LeadRepo(db.client);
+        const lead = (await repo.getLeadById(7))!;
+        expect(lead).toMatchObject({ stage, status: true, score: 200 });
+        expect(lead.isActive()).toBe(false);
+        expect(db.queries).toHaveLength(1);
+        expect(db.queries[0].update).not.toHaveBeenCalled();
+        expect(await repo.updateLead(lead)).toBeNull();
+        expect(db.queries[2].update).toHaveBeenCalledWith(expect.objectContaining({
+            stage: stage.trim().toUpperCase(), status: false, score: 0,
+        }));
+        expect(lead).toMatchObject({ stage, status: true, score: 200 });
+    });
+
     it("DB-LEAD-01: nullable columns map to domain defaults without losing false or zero", async () => {
         const db = scriptedClient([{ data: { lead_id: 7, first_name: " Ada ", last_name: null, status: false, budget: 0, stage: null } }]);
         const lead = await new LeadRepo(db.client).getLeadById(7);
