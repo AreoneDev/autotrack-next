@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { clearLinkError, expiredLinkMessage, readLinkError } from "@/lib/auth/recovery";
 
 import { supabase } from "@/lib/supabase/client";
 
@@ -23,12 +25,24 @@ export default function LoginPage() {
         let isMounted = true;
 
         async function redirectSignedInUser() {
-            const { data } = await supabase.auth.getSession();
-
-            if (isMounted) {
+            try {
+                const { data, error: sessionError } = await supabase.auth.getSession();
+                if (!isMounted) return;
+                const url = new URL(window.location.href);
+                const linkError = readLinkError(url);
                 setIsReady(true);
-                if (data.session) {
+                if (linkError) {
+                    setError(expiredLinkMessage);
+                    clearLinkError(url);
+                } else if (sessionError) {
+                    setError("Unable to check your session. Please try signing in again.");
+                } else if (data.session) {
                     router.replace("/dashboard");
+                }
+            } catch {
+                if (isMounted) {
+                    setIsReady(true);
+                    setError("Unable to check your session. Please try signing in again.");
                 }
             }
         }
@@ -42,12 +56,14 @@ export default function LoginPage() {
 
     function selectMode(nextMode: AuthMode) {
         setMode(nextMode);
+        setPassword("");
         setMessage("");
         setError("");
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (isSubmitting || !isReady) return;
         setError("");
         setMessage("");
         setIsSubmitting(true);
@@ -110,7 +126,7 @@ export default function LoginPage() {
     const requiresPassword = mode !== "code";
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+        <main className="flex h-dvh items-start justify-center overflow-y-auto bg-slate-50 p-6 sm:items-center">
             <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
                 <p className="text-sm font-semibold text-blue-700">AutoTrack</p>
                 <h1 className="mt-2 text-2xl font-bold text-slate-900">
@@ -121,21 +137,21 @@ export default function LoginPage() {
                 </p>
 
                 <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
-                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "password" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "password"} disabled={!isReady} onClick={() => selectMode("password")} type="button">Password</Button>
-                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "code" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "code"} disabled={!isReady} onClick={() => selectMode("code")} type="button">Email link</Button>
-                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "register" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "register"} disabled={!isReady} onClick={() => selectMode("register")} type="button">Register</Button>
+                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "password" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "password"} disabled={!isReady || isSubmitting} onClick={() => selectMode("password")} type="button">Password</Button>
+                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "code" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "code"} disabled={!isReady || isSubmitting} onClick={() => selectMode("code")} type="button">Email link</Button>
+                    <Button variant="ghost" className={`rounded-lg px-3 py-2 ${mode === "register" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`} aria-pressed={mode === "register"} disabled={!isReady || isSubmitting} onClick={() => selectMode("register")} type="button">Register</Button>
 
                 </div>
 
                 <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                     <label className="block text-sm font-medium text-slate-700">
                         Email
-                        <Input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete="email" disabled={!isReady} onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
+                        <Input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete="email" disabled={!isReady || isSubmitting} onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
                     </label>
                     {requiresPassword ? (
                         <label className="block text-sm font-medium text-slate-700">
                             Password
-                            <Input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete={mode === "register" ? "new-password" : "current-password"} disabled={!isReady} minLength={mode === "register" ? 8 : undefined} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+                            <Input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete={mode === "register" ? "new-password" : "current-password"} disabled={!isReady || isSubmitting} minLength={mode === "register" ? 8 : undefined} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
                         </label>
                     ) : null}
 
@@ -146,6 +162,10 @@ export default function LoginPage() {
                         {isSubmitting ? "Please wait…" : mode === "code" ? "Send sign-in link" : mode === "register" ? "Create account" : "Sign in"}
                     </Button>
                 </form>
+                <div className="mt-5 flex flex-wrap gap-x-4 gap-y-3 text-sm">
+                    <Link href="/forgot-password" className="font-medium text-blue-700 underline">Forgot your password?</Link>
+                    <Link href="/resend-confirmation" className="font-medium text-blue-700 underline">Resend confirmation email</Link>
+                </div>
             </section>
         </main>
     );
