@@ -496,7 +496,7 @@ export class ScoringService {
     }
 
     private isClosedLead(lead: Lead): boolean {
-        return this.normalizeStage(lead.stage) === "CLOSED";
+        return !lead.status || this.normalizeStage(lead.stage) === "CLOSED";
     }
 
     private normalizeStage(stage: string | null | undefined): string {

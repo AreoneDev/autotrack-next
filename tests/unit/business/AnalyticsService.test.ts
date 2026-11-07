@@ -52,6 +52,16 @@ describe("AN — analytics rules (equivalence partitions, boundaries, decision t
         expect(result.leadQuality.hotLeadRatio.numerator).toBe(1);
     });
 
+    it("inactive and terminal leads cannot qualify as hot through stale stored scores", () => {
+        const result = service.getAnalyticsSummary([
+            makeLead({ status: false, stage: "NEGOTIATION", score: 200 }),
+            makeLead({ leadID: 2, stage: "DELIVERED", score: 200 }),
+            makeLead({ leadID: 3, stage: "CLOSED", score: 200 }),
+        ], [], []);
+        expect(result.leadQuality.hotLeadRatio.numerator).toBe(0);
+        expect(result.hotLeadsTrend.map((point) => point.count)).toEqual([0]);
+    });
+
     it.each([
         [true, "NEW", 100, 0],
         [false, "NEW", 0, 0],

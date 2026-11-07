@@ -321,6 +321,10 @@ export class AnalyticsService {
     }
 
     private getLeadScore(lead: Lead): number {
+        if (!this.isActiveLead(lead)) {
+            return 0;
+        }
+
         return Math.max(lead.score, this.scoringService.calculateScore(lead));
     }
 
