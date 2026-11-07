@@ -35,6 +35,11 @@ function edit(lead = fixture) {
     fireEvent.change(screen.getByLabelText("First Name", { exact: true }), { target: { value: "Updated" } });
 }
 const save = () => fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+const expectNoUnexpectedSupabaseTables = () => {
+    // Contact history is loaded from notifications when the panel mounts.
+    // These checks concern writes from the save flow, not that independent read.
+    expect(supabase.from.mock.calls.every(([table]) => table === "notifications")).toBe(true);
+};
 
 it("keeps draft on failure; unchanged retry uses one RPC with the same request/version", async () => {
     rpc.mockRejectedValueOnce(new Error("Lost response")).mockResolvedValueOnce(success as never);
@@ -50,7 +55,7 @@ it("keeps draft on failure; unchanged retry uses one RPC with the same request/v
     expect(rpc.mock.calls[0]).toEqual(["autotrack_save_lead_details", expect.objectContaining({
         p_lead_id: 1, p_expected_version: 7, p_details: expect.objectContaining({ first_name: "Updated" }),
     })]);
-    expect(supabase.from).not.toHaveBeenCalled();
+    expectNoUnexpectedSupabaseTables();
     // A subsequent edit uses the version returned by the successful save.
     fireEvent.click(screen.getByRole("button", { name: "Modify" }));
     rpc.mockResolvedValueOnce({ ...success, data: { ...success.data, version: 9 } } as never);
@@ -76,12 +81,12 @@ it.each(["PGRST202", "42883"])("missing RPC (%s) fails closed with migration gui
     rpc.mockResolvedValue({ data: null, error: { code, message: "missing" } } as never);
     edit(); save();
     await screen.findByText("Atomic lead saving is unavailable. Apply the database migrations and reload before saving.");
-    expect(supabase.from).not.toHaveBeenCalled();
+    expectNoUnexpectedSupabaseTables();
 });
 
 it("missing version fails closed before any write", async () => {
     edit({ ...fixture, version: null }); save();
     await screen.findByText("Lead version is unavailable. Apply the database migrations and reload before saving.");
     expect(rpc).not.toHaveBeenCalled();
-    expect(supabase.from).not.toHaveBeenCalled();
+    expectNoUnexpectedSupabaseTables();
 });
