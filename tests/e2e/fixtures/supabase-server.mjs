@@ -99,7 +99,9 @@ const server = createServer(async (request, response) => {
             return send(200, { url: recoveryLink.url });
         }
         if (["/auth/v1/recover", "/auth/v1/resend"].includes(url.pathname) && request.method === "POST") {
-            const redirect = new URL(url.searchParams.get("redirect_to"));
+            const redirectTo = url.searchParams.get("redirect_to") ?? body.emailRedirectTo ?? body.redirect_to;
+            if (typeof redirectTo !== "string") return send(400, { message: "Missing synthetic redirect" });
+            const redirect = new URL(redirectTo);
             if (redirect.origin !== `http://127.0.0.1:${appPort}`) return send(400, { message: "Invalid synthetic redirect" });
             redirect.searchParams.set("code", "synthetic-recovery-code");
             recoveryLink = { url: redirect.href, challenge: body.code_challenge, used: false };
