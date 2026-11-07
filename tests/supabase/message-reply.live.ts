@@ -27,6 +27,7 @@ beforeAll(async () => {
     expect(lead.error).toBeNull();
     const rows = await owner.from("notifications").insert(["inbound", "inbound", "outbound"].map(contact_direction => ({
         lead_id: lead.data!.lead_id, title: "Synthetic contact", date: "2026-01-01T12:00:00Z", contact_direction,
+        contact_channel: "email", contact_outcome: contact_direction === "inbound" ? "received" : "sent",
     }))).select();
     expect(rows.error).toBeNull();
     [incomingId, secondId, outboundId] = rows.data!.map(row => row.notification_id);
