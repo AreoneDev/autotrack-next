@@ -1,3 +1,4 @@
+import { MessageReplyRepo } from "@/lib/persistence/real/supabase/MessageReplyRepo";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireServerClient } from "@/lib/supabase/server";
@@ -108,10 +109,11 @@ export default async function DashboardPage() {
         agendaService
     );
 
-    const [leads, tasks, notifications] = await Promise.all([
+    const [leads, tasks, notifications, replyResult] = await Promise.all([
         leadRepo.getAllLeads(),
         taskRepo.getAllTasks(),
         notificationRepo.getAllNotifications(),
+        new MessageReplyRepo(client).getRecords(),
     ]);
     const hydratedLeads = await hydrateLeadVehicleData(leads, client);
 
@@ -121,7 +123,8 @@ export default async function DashboardPage() {
         hydratedLeads,
         allTasks,
         notifications,
-        targetDate
+        targetDate,
+        replyResult.available ? replyResult.records : null
     );
 
     const summaryCards = [
@@ -139,8 +142,8 @@ export default async function DashboardPage() {
         },
         {
             title: "Unreplied Messages",
-            value: dashboardData.metrics.unrepliedMessageCount.toString(),
-            description: "Customer replies waiting for response",
+            value: dashboardData.metrics.unrepliedMessageCount?.toString() ?? "Unavailable",
+            description: replyResult.available ? "Recorded incoming contacts awaiting reply" : "Reply tracking unavailable. Refresh to retry.",
             icon: MessageSquareWarning,
         },
         {
