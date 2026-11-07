@@ -24,7 +24,8 @@
     "test:a11y": "playwright test accessibility.spec.ts",
     "test:supabase": "node tests/supabase/run.mjs",
     "test:atomic-db": "node tests/atomic/run.mjs",
-    "test:atomic-concurrency": "node tests/atomic/concurrency.mjs"
+    "test:atomic-concurrency": "node tests/atomic/concurrency.mjs",
+    "test:data-recovery": "node tests/data-recovery/run.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -143,6 +143,21 @@ const server = createServer(async (request, response) => {
             saveRequests.set(body.p_request_id, { fingerprint, result });
             return send(200, result);
         }
+        if (url.pathname === "/rest/v1/rpc/autotrack_delete_lead" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            if (failure?.table === "leads" && failure.method === "DELETE") {
+                failure = null;
+                return send(503, { message: "Synthetic write failure" });
+            }
+            const id = body.p_lead_id;
+            if (!tables.leads.some(row => row.lead_id === id)) return send(400, { code: "P0001", message: "Lead not found." });
+            // Model the RPC response for UI tests; PostgreSQL/RLS semantics are
+            // verified separately in tests/supabase, never by this HTTP double.
+            for (const name of ["leads", "tasks", "notifications", "lead_vehicle_interests", "lead_trade_in_vehicles"]) {
+                tables[name] = tables[name].filter(row => row.lead_id !== id);
+            }
+            return send(200, null);
+        }
         const table = url.pathname.replace("/rest/v1/", "");
         if (!url.pathname.startsWith("/rest/v1/") || !Object.hasOwn(tables, table)) {
             return send(404, { message: `Unimplemented test endpoint: ${request.method} ${url.pathname}` });
