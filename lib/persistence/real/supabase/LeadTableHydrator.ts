@@ -1,3 +1,4 @@
+import { readAllPages } from "./readAllPages";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Lead } from "@/domain/objects/Lead";
 import { Vehicle } from "@/domain/objects/Vehicle";
@@ -29,8 +30,11 @@ export async function hydrateLeadTableData(leads: Lead[], client: SupabaseClient
     });
 
     async function load(table: string, target: Map<number, Vehicle>, batch: number[]) {
-        const { data, error } = await client.from(table).select("lead_id,trim_override,vehicles(*)").in("lead_id", batch);
-        if (error || !data) return; // Preserve existing missing-association behavior.
+        const data = await readAllPages<AssociationRow>((from, to) => client.from(table)
+            .select("lead_id,trim_override,vehicles(*)")
+            .in("lead_id", batch)
+            .order("lead_id", { ascending: true })
+            .range(from, to).returns<AssociationRow[]>());
         for (const row of data as unknown as AssociationRow[]) {
             // An invisible/deleted related vehicle is null under a left embedding.
             if (!row.vehicles) continue;

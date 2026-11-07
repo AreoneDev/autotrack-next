@@ -1,3 +1,4 @@
+import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -102,14 +103,11 @@ export class LeadRepo {
     constructor(private readonly client: SupabaseClient = supabase) {}
 
     async getAllLeads(): Promise<Lead[]> {
-        const { data, error } = await this.client
+        const data = await readAllPages<LeadRow>((from, to) => this.client
             .from(TABLE_NAME)
             .select("*")
-            .order("lead_id", { ascending: true });
-
-        if (error || !data) {
-            return [];
-        }
+            .order("lead_id", { ascending: true })
+            .range(from, to));
 
         return data.map((row) => mapRowToLead(row as LeadRow));
     }
@@ -150,6 +148,7 @@ export class LeadRepo {
                 ].join(",")
             )
             .order("last_name", { ascending: true })
+            .order("lead_id", { ascending: true })
             .limit(limit);
 
         if (error || !data) {
@@ -166,17 +165,15 @@ export class LeadRepo {
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 
-        const { data, error } = await this.client
+        const data = await readAllPages<LeadRow>((from, to) => this.client
             .from(TABLE_NAME)
             .select("*")
             .not("follow_up_date", "is", null)
             .gte("follow_up_date", startOfDay.toISOString())
             .lt("follow_up_date", endOfDay.toISOString())
-            .order("follow_up_date", { ascending: true });
-
-        if (error || !data) {
-            return [];
-        }
+            .order("follow_up_date", { ascending: true })
+            .order("lead_id", { ascending: true })
+            .range(from, to));
 
         return data.map((row) => mapRowToLead(row as LeadRow));
     }
