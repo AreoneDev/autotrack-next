@@ -36,7 +36,7 @@ test("E2E-DETAIL-01: cancel, failed save, retry and reload preserve lead fields"
     await expect(page.getByText("updated@example.test", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Modify", exact: true }).click();
     await expect(page.getByLabel("First Name", { exact: true })).toHaveValue("Updated");
-    await expect(page.getByLabel("Phone", { exact: true })).toHaveValue("4165550199");
+    await expect(page.getByLabel("Phone", { exact: true })).toHaveValue("+14165550199");
     await expect(page.getByLabel("Budget", { exact: true })).toHaveValue("42000");
     await expect(page.getByRole("combobox", { name: "Stage", exact: true })).toContainText("NEGOTIATION");
     await expect(page.getByLabel("Follow-up Date", { exact: true })).toHaveValue(day(3));
