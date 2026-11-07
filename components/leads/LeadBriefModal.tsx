@@ -30,7 +30,7 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
                     </Button>
                 </div>
 
-                <div className="space-y-3 text-sm text-gray-700">
+                <div className="space-y-3 text-sm text-gray-800">
                     <p><strong>Name:</strong> {lead.getLeadName()}</p>
                     <p><strong>Phone:</strong> {lead.phone || "N/A"}</p>
                     <p><strong>Email:</strong> {lead.leadEmail || "N/A"}</p>
