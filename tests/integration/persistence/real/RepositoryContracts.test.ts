@@ -9,7 +9,7 @@ jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 describe("DB — repository mapping and failure contracts", () => {
     it.each([" closed ", " delivered "])("legacy %s reads remain untouched; explicit writes normalize terminal state", async (stage) => {
         const row = { lead_id: 7, first_name: "Legacy", stage, status: true, score: 200 };
-        const db = scriptedClient([{ data: row }, { data: row }, {}]);
+        const db = scriptedClient([{ data: row }, { data: row }, { data: row }]);
         const repo = new LeadRepo(db.client);
         const lead = (await repo.getLeadById(7))!;
         expect(lead).toMatchObject({ stage, status: true, score: 200 });
@@ -17,9 +17,12 @@ describe("DB — repository mapping and failure contracts", () => {
         expect(db.queries).toHaveLength(1);
         expect(db.queries[0].update).not.toHaveBeenCalled();
         expect(await repo.updateLead(lead)).toBeNull();
-        expect(db.queries[2].update).toHaveBeenCalledWith(expect.objectContaining({
-            stage: stage.trim().toUpperCase(), status: false, score: 0,
-        }));
+        expect(db.rpc).toHaveBeenCalledWith("save_lead_validated", {
+            p_lead: expect.objectContaining({
+                lead_id: 7, stage: stage.trim().toUpperCase(), status: false, score: 0,
+            }),
+            p_duplicate_ids: [],
+        });
         expect(lead).toMatchObject({ stage, status: true, score: 200 });
     });
 
