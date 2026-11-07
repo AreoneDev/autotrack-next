@@ -30,24 +30,19 @@ function draft(id: number, name: string, request = randomUUID(), version = 1) {
 
 it("stale editor: the second aggregate save changes nothing", async () => {
     const row = await lead();
-    console.log("atomic live: inserted lead", row.lead_id);
     const first = await db.rpc("autotrack_save_lead_details", draft(row.lead_id, "Editor A"));
-    console.log("atomic live: first save returned", first.error?.code ?? "success");
     expect(first.error).toBeNull();
     const stale = await db.rpc("autotrack_save_lead_details", draft(row.lead_id, "Editor B"));
-    console.log("atomic live: stale save returned", stale.error?.code ?? "success");
     expect(stale.error?.code).toBe("40001");
     const saved = await db.from("leads").select().eq("lead_id", row.lead_id).single();
-    console.log("atomic live: lead reload returned", saved.error?.code ?? "success");
     expect(saved.error).toBeNull();
     expect(saved.data.version).toBe(2);
     for (const table of ["lead_vehicle_interests", "lead_trade_in_vehicles"]) {
         const link = await db.from(table).select().eq("lead_id", row.lead_id).single();
-        console.log("atomic live: association reload returned", table, link.error?.code ?? "success");
         expect(link.error).toBeNull();
         expect(link.data).toMatchObject({ vehicle_id: 1, trim_override: saved.data.first_name });
     }
-}, 120_000);
+});
 
 it("duplicate requests and a lost-response retry commit only once", async () => {
     const row = await lead();

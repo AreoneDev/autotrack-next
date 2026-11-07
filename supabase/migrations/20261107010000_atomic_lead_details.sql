@@ -116,7 +116,10 @@ begin
     lead_province = changes.lead_province, lead_country = changes.lead_country,
     lead_postal_code = changes.lead_postal_code, budget = changes.budget,
     stage = changes.stage, follow_up_date = changes.follow_up_date, score = changes.score,
-    notes = changes.notes, status = changes.status
+    notes = changes.notes, status = changes.status,
+    -- Keep the atomic RPC's optimistic version contract explicit. The shared
+    -- revision trigger sets the same old-version-plus-one value when present.
+    version = current_lead.version + 1
     where lead_id = p_lead_id returning version into saved_version;
 
   if interest is null then
