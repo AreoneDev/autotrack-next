@@ -23,7 +23,7 @@ describe("account settings", () => {
     });
     it("signs out locally, prevents duplicates and redirects", async () => {
         const request = deferred<{ error: null }>(); supabase.auth.signOut.mockReturnValue(request.promise);
-        setup(); const user = userEvent.setup(); await user.click(screen.getByRole("button", { name: /^Account/ }));
+        setup(); const user = userEvent.setup(); await screen.findByText("ada@example.test"); await user.click(screen.getByRole("button", { name: /ada@example.test/ }));
         await user.click(screen.getByRole("button", { name: "Sign out" }));
         expect(screen.getByRole("button", { name: "Signing out…" })).toBeDisabled();
         expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
@@ -31,7 +31,7 @@ describe("account settings", () => {
     });
     it("keeps the user signed in on failure and allows retry", async () => {
         supabase.auth.signOut.mockResolvedValueOnce({ error: { message: "Failed" } }).mockResolvedValueOnce({ error: null });
-        setup(); const user = userEvent.setup(); await user.click(screen.getByRole("button", { name: /^Account/ })); await user.click(screen.getByRole("button", { name: "Sign out" }));
+        setup(); const user = userEvent.setup(); await screen.findByText("ada@example.test"); await user.click(screen.getByRole("button", { name: /ada@example.test/ })); await user.click(screen.getByRole("button", { name: "Sign out" }));
         expect(await screen.findByRole("alert")).toHaveTextContent("Sign out failed"); expect(router.replace).not.toHaveBeenCalled();
         await user.click(screen.getByRole("button", { name: "Sign out" })); await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/login"));
     });
