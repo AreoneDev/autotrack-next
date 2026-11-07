@@ -36,7 +36,7 @@ const sectionConfig = [
     },
     {
         title: "Performance Trends",
-        description: "Monthly changes in closing rate and hot lead generation.",
+        description: "Current outcomes grouped by the month each lead was created.",
         icon: Activity,
     },
     {
@@ -353,13 +353,13 @@ export default async function AnalyticsPage() {
                 <div className="grid gap-4 lg:grid-cols-2">
                     <LineChartCard
                         title="Sales Closing Rate Trend"
-                        description="Shows how many leads are turning into vehicle deliveries over time."
+                        description="Delivered leads divided by all leads created in each month. Closed outcomes are unconfirmed and do not count as deals."
                         data={mapClosingTrend(summary.salesClosingRateTrend)}
                         valueSuffix="%"
                     />
                     <LineChartCard
                         title="Hot Leads Trend"
-                        description="Shows how many high-priority leads are being generated over time."
+                        description="Current active hot leads grouped by the month each lead was created."
                         data={mapHotLeadsTrend(summary.hotLeadsTrend)}
                     />
                 </div>

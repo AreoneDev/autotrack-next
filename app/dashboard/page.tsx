@@ -1,5 +1,5 @@
+import { MessageReplyRepo } from "@/lib/persistence/real/supabase/MessageReplyRepo";
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireServerClient } from "@/lib/supabase/server";
 import {
     AlertTriangle,
@@ -19,47 +19,16 @@ import { AgendaService } from "@/domain/business/AgendaService";
 import { DashboardService } from "@/domain/business/DashboardService";
 import { PriorityManager } from "@/domain/business/PriorityManager";
 import { ScoringService } from "@/domain/business/ScoringService";
-import { Lead } from "@/domain/objects/Lead";
-import { LeadTradeInVehicleRepo } from "@/lib/persistence/real/supabase/LeadTradeInVehicleRepo";
-import { LeadVehicleInterestRepo } from "@/lib/persistence/real/supabase/LeadVehicleInterestRepo";
+import { hydrateLeadTableData } from "@/lib/persistence/real/supabase/LeadTableHydrator";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
-import { VehicleRepo } from "@/lib/persistence/real/supabase/VehicleRepo";
 import { DashboardRecentActivityType } from "@/domain/business/DashboardService";
 import DashboardTaskCard from "@/components/dashboard/DashboardTaskCard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
-
-async function hydrateLeadVehicleData(leads: Lead[], client: SupabaseClient): Promise<Lead[]> {
-    const vehicleRepository = new VehicleRepo(client);
-    const vehicleInterestRepository = new LeadVehicleInterestRepo(
-        vehicleRepository, client
-    );
-    const tradeInVehicleRepository = new LeadTradeInVehicleRepo(
-        vehicleRepository, client
-    );
-
-    return Promise.all(
-        leads.map(async (lead) => {
-            const [vehicleInterest, tradeInVehicle] = await Promise.all([
-                vehicleInterestRepository.getVehicleInterestByLeadId(
-                    lead.leadID
-                ),
-                tradeInVehicleRepository.getTradeInVehicleByLeadId(
-                    lead.leadID
-                ),
-            ]);
-
-            lead.vehicleInterest = vehicleInterest;
-            lead.tradeInVehicle = tradeInVehicle;
-
-            return lead;
-        })
-    );
-}
 
 function getPriorityTone(tone: string) {
     if (tone === "red") {
@@ -108,12 +77,13 @@ export default async function DashboardPage() {
         agendaService
     );
 
-    const [leads, tasks, notifications] = await Promise.all([
+    const [leads, tasks, notifications, replyResult] = await Promise.all([
         leadRepo.getAllLeads(),
         taskRepo.getAllTasks(),
         notificationRepo.getAllNotifications(),
+        new MessageReplyRepo(client).getRecords(),
     ]);
-    const hydratedLeads = await hydrateLeadVehicleData(leads, client);
+    const hydratedLeads = await hydrateLeadTableData(leads, client);
 
     const allTasks = agendaService.getUniqueTasks(tasks);
 
@@ -121,7 +91,8 @@ export default async function DashboardPage() {
         hydratedLeads,
         allTasks,
         notifications,
-        targetDate
+        targetDate,
+        replyResult.available ? replyResult.records : null
     );
 
     const summaryCards = [
@@ -139,8 +110,8 @@ export default async function DashboardPage() {
         },
         {
             title: "Unreplied Messages",
-            value: dashboardData.metrics.unrepliedMessageCount.toString(),
-            description: "Customer replies waiting for response",
+            value: dashboardData.metrics.unrepliedMessageCount?.toString() ?? "Unavailable",
+            description: replyResult.available ? "Recorded incoming contacts awaiting reply" : "Reply tracking unavailable. Refresh to retry.",
             icon: MessageSquareWarning,
         },
         {

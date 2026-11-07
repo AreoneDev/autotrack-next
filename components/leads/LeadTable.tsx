@@ -18,6 +18,8 @@ import Autocomplete from "@/components/ui/Autocomplete";
 import { Plus, X } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
+import { ScoringService } from "@/domain/business/ScoringService";
+import { getLeadOutcome, isTerminalLeadStage, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 import { localDateInput } from "@/lib/date";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import Modal from "@/components/ui/Modal";
@@ -150,12 +152,11 @@ export default function LeadTable({ leads }: LeadTableProps) {
             lastName: newLead.lastName,
             phone: newLead.phone,
             leadEmail: newLead.leadEmail,
-            stage: newLead.stage,
+            ...leadStateForWrite({ stage: newLead.stage, status: true }),
             budget: Number(newLead.budget) || 0,
             followUpDate: new Date(`${newLead.followUpDate}T09:00:00`),
             notes: newLead.notes,
             createdAt: new Date(),
-            status: true,
         });
 
         const leadRepository = new LeadRepo();
@@ -213,8 +214,16 @@ export default function LeadTable({ leads }: LeadTableProps) {
             return;
         }
 
+        if (isTerminalLeadStage(leadToUpdate.stage)) {
+            setDeleteError("Change the stage in lead details to update a closed or delivered lead.");
+            setUpdatingStatusLeadId(null);
+            return;
+        }
+
         const previousStatus = leadToUpdate.status;
+        const previousScore = leadToUpdate.score;
         leadToUpdate.status = newStatus;
+        leadToUpdate.updateScore(new ScoringService().calculateScore(leadToUpdate));
 
         setLeadList((currentLeads) =>
             currentLeads.map((lead) =>
@@ -229,6 +238,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
         if (error) {
             leadToUpdate.status = previousStatus;
+            leadToUpdate.score = previousScore;
             setLeadList((currentLeads) =>
                 currentLeads.map((lead) =>
                     lead.leadID === leadId ? leadToUpdate : lead
@@ -388,12 +398,11 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
             const matchesStatus =
                 statusFilter === "ALL" ||
-                (statusFilter === "ACTIVE" && lead.status) ||
-                (statusFilter === "LOST" && !lead.status);
+                getLeadOutcome(lead) === statusFilter;
 
             const matchesStage =
                 stageFilter === "ALL" ||
-                lead.stage.toUpperCase() === stageFilter;
+                normalizeLeadStage(lead.stage) === stageFilter;
 
             const hasTradeIn = lead.tradeInVehicle !== null;
 
@@ -573,6 +582,8 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <SelectItem value="ALL">All Status</SelectItem>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="LOST">Lost</SelectItem>
+                                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                <SelectItem value="CLOSED">Closed (outcome unconfirmed)</SelectItem>
                             </SelectField>
 
                             <SelectField
@@ -587,9 +598,11 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <SelectItem value="NEW">New</SelectItem>
                                 <SelectItem value="CONTACTED">Contacted</SelectItem>
                                 <SelectItem value="VISITED">Visited</SelectItem>
+                                <SelectItem value="APPOINTMENT">Appointment</SelectItem>
                                 <SelectItem value="TEST_DRIVE">Test Drive</SelectItem>
                                 <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
                                 <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                <SelectItem value="CLOSED">Closed</SelectItem>
                             </SelectField>
 
                             <SelectField
@@ -845,9 +858,11 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                         <SelectItem value="NEW">New</SelectItem>
                                         <SelectItem value="CONTACTED">Contacted</SelectItem>
                                         <SelectItem value="VISITED">Visited</SelectItem>
+                                        <SelectItem value="APPOINTMENT">Appointment</SelectItem>
                                         <SelectItem value="TEST_DRIVE">Test Drive</SelectItem>
                                         <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
-                                        <SelectItem value="CLOSED">Closed</SelectItem>
+                                        <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                        <SelectItem value="CLOSED">Closed (outcome unconfirmed)</SelectItem>
                                     </SelectField>
                                 </label>
 
