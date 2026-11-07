@@ -48,7 +48,8 @@ test("E2E-AGENDA-01: validate lead and type, search, fail creation, retry and na
     await page.getByRole("button", { name: /Journey Customer.*journey@example.test/ }).click();
     await page.getByRole("button", { name: "Add Task", exact: true }).click();
     await expect(page.getByText("Select a task type before creating the task.", { exact: true })).toBeVisible();
-    await page.getByLabel("Task type", { exact: true }).selectOption("Appointment");
+    await page.getByLabel("Task type", { exact: true }).click();
+    await page.getByRole("option", { name: "Appointment", exact: true }).click();
     await page.getByLabel("Task date", { exact: true }).fill(day(1));
     await page.getByLabel("Task time", { exact: true }).fill("15:20");
     await page.getByPlaceholder("Customer request or follow-up notes").fill("Synthetic appointment notes");
@@ -56,7 +57,7 @@ test("E2E-AGENDA-01: validate lead and type, search, fail creation, retry and na
     await failNext(request, "tasks", "POST");
     await page.getByRole("button", { name: "Add Task", exact: true }).click();
     await expect(page.getByText("Synthetic write failure", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Task type", { exact: true })).toHaveValue("Appointment");
+    await expect(page.getByLabel("Task type", { exact: true })).toContainText("Appointment");
     expect((await state(request)).tasks).toHaveLength(before);
     await page.getByRole("button", { name: "Add Task", exact: true }).click();
     await expect(search).toHaveValue("");
@@ -118,4 +119,19 @@ test("E2E-DASH-02: empty dashboard and an empty agenda day show actionable empty
     await page.getByLabel("Agenda date", { exact: true }).fill(day(10));
     await expect(page.getByText("No activities for this date.", { exact: true })).toBeVisible();
     await expect(page.getByText("0 Activities", { exact: true })).toBeVisible();
+});
+
+test("date and time popovers update agenda fields", async ({ page, request }) => {
+    await reset(request);
+    await login(page);
+    await page.goto("/agenda");
+    const date = page.getByLabel("Task date", { exact: true });
+    await date.fill("2026-06-15");
+    await page.getByRole("button", { name: "Choose date" }).last().click();
+    const popup = page.locator('[data-slot="popover-content"]');
+    await popup.getByRole("button", { name: /June 16.*2026/ }).click();
+    await expect(date).toHaveValue("2026-06-16");
+    await page.getByRole("button", { name: "Choose time" }).click();
+    await popup.getByRole("button", { name: "15:30", exact: true }).click();
+    await expect(page.getByLabel("Task time", { exact: true })).toHaveValue("15:30");
 });

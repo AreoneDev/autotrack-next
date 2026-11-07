@@ -21,7 +21,12 @@ test("E2E-AUTH-02: login, authenticated navigation, and logout", async ({ page }
     await page.getByLabel("Password", { exact: true }).fill("test-password-123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL("/dashboard");
-    await expect(page.getByText("ada@example.test", { exact: true })).toBeVisible();
+    const accountEmail = page.getByText("ada@example.test", { exact: true });
+    if ((page.viewportSize()?.width ?? 0) >= 640) {
+        await expect(accountEmail).toBeVisible();
+    } else {
+        await expect(accountEmail).toBeHidden();
+    }
     await page.goto("/leads");
     await expect(page.getByRole("heading", { name: "Lead Filters" })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -45,12 +46,12 @@ export default function Sidebar() {
     return (
         <aside
             className={`flex h-screen shrink-0 flex-col border-r border-gray-200 bg-white shadow-sm transition-all duration-300 ${
-                collapsed ? "w-24" : "w-72"
+                collapsed ? "w-16 md:w-24" : "w-72"
             }`}
         >
-            <div className="flex items-center justify-between px-6 py-6">
+            <div className="flex items-center justify-between px-2 py-6 md:px-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 overflow-hidden rounded-lg">
+                    <div className={`h-12 w-12 overflow-hidden rounded-lg ${collapsed ? "hidden md:block" : ""}`}>
                         <Image
                             src="/ic_autotrack_blue.png"
                             alt="AutoTrack Logo"
@@ -73,7 +74,7 @@ export default function Sidebar() {
                     ) : null}
                 </div>
 
-                <button
+                <Button variant="ghost"
                     onClick={() => setCollapsed(!collapsed)}
                     className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
                     aria-expanded={!collapsed}
@@ -81,10 +82,10 @@ export default function Sidebar() {
                     aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                </button>
+                </Button>
             </div>
 
-            <nav id="primary-navigation" aria-label="Primary" className="mt-6 flex flex-col gap-2 px-4">
+            <nav id="primary-navigation" aria-label="Primary" className="mt-6 flex flex-col gap-2 px-2 md:px-4">
                 {navItems.map((item) => {
                     const Icon = item.icon;
 
@@ -109,9 +110,9 @@ export default function Sidebar() {
                 })}
             </nav>
 
-            <div className="mt-auto border-t border-gray-200 px-6 py-6">
+            <div className="mt-auto border-t border-gray-200 px-2 py-6 md:px-6">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 font-bold text-white">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-white">
                         PW
                     </div>
 

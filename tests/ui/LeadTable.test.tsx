@@ -41,7 +41,9 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         ["BELOW_50", ["Ada Chen"]], ["BETWEEN_50_79", ["Ben Chen", "Cam Chen"]], ["ABOVE_80", ["Dan Chen"]],
     ])("UI-LEAD-02: score boundaries in %s", async (filter, names) => {
         setup();
-        await userEvent.setup().selectOptions(screen.getByRole("combobox", { name: "Filter by score" }), filter);
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("combobox", { name: "Filter by score" }));
+        await user.click(await screen.findByRole("option", { name: ({ BELOW_50: "Below 50", BETWEEN_50_79: "50 - 79", ABOVE_80: "80+" } as Record<string, string>)[filter as string] }));
         expect(screen.getAllByRole("row")).toHaveLength(names.length + 1);
         names.forEach((name) => expect(screen.getByRole("link", { name })).toBeInTheDocument());
     });
@@ -49,11 +51,14 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
     it("UI-LEAD-03: filters combine with AND; clearing restores all rows", async () => {
         setup();
         const user = userEvent.setup();
-        await user.selectOptions(screen.getByRole("combobox", { name: "Filter by stage" }), "CONTACTED");
-        await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "ACTIVE");
+        await user.click(screen.getByRole("combobox", { name: "Filter by stage" }));
+        await user.click(await screen.findByRole("option", { name: "Contacted" }));
+        await user.click(screen.getByRole("combobox", { name: "Filter by status" }));
+        await user.click(await screen.findByRole("option", { name: "Active" }));
         expect(screen.getAllByRole("row")).toHaveLength(2);
         expect(screen.getByRole("link", { name: "Cam Chen" })).toBeInTheDocument();
-        await user.selectOptions(screen.getByRole("combobox", { name: "Filter by trade-in" }), "YES");
+        await user.click(screen.getByRole("combobox", { name: "Filter by trade-in" }));
+        await user.click(await screen.findByRole("option", { name: "Yes" }));
         expect(screen.getByText("No leads match the selected filters.")).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Clear Filters" }));
         expect(screen.getAllByRole("row")).toHaveLength(5);
@@ -98,11 +103,13 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         const user = userEvent.setup();
         update.mockResolvedValueOnce("Update denied");
         const row = screen.getByRole("link", { name: "Ada Chen" }).closest("tr")!;
-        await user.selectOptions(within(row).getByRole("combobox"), "LOST");
+        await user.click(within(row).getByRole("combobox"));
+        await user.click(await screen.findByRole("option", { name: "Lost" }));
         expect(await screen.findByText("Update denied")).toBeInTheDocument();
-        expect(within(row).getByRole("combobox")).toHaveValue("ACTIVE");
-        await user.selectOptions(within(row).getByRole("combobox"), "LOST");
-        expect(within(row).getByRole("combobox")).toHaveValue("LOST");
+        expect(within(row).getByRole("combobox")).toHaveTextContent("Active");
+        await user.click(within(row).getByRole("combobox"));
+        await user.click(await screen.findByRole("option", { name: "Lost" }));
+        expect(within(row).getByRole("combobox")).toHaveTextContent("Lost");
         expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ leadID: 1, status: false }));
     });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import AccountMenu from "@/components/auth/AccountMenu";
 import { useEffect, useRef, useState } from "react";
@@ -218,23 +219,23 @@ export default function TopBar() {
     ).length;
 
     return (
-        <header className="flex h-20 items-center justify-between border-b bg-white px-8">
+        <header className="flex h-20 shrink-0 items-center justify-between gap-2 border-b bg-white px-4 sm:px-8">
 
-            <div>
-                <h1 id="page-title" className="text-2xl font-bold text-slate-950">
+            <div className="min-w-0">
+                <h1 id="page-title" className="truncate text-xl font-bold text-slate-950 sm:text-2xl">
                     {pageInfo.title}
                 </h1>
-                <p className="text-sm text-slate-500">
+                <p className="hidden text-sm text-slate-500 sm:block">
                     {pageInfo.description}
                 </p>
             </div>
 
-            <div className="flex items-center gap-8">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4 lg:gap-8">
 
                 <div className="relative"
                     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setNotificationsOpen(false); }}
                     onKeyDown={(event) => { if (event.key === "Escape" && notificationsOpen) { setNotificationsOpen(false); notificationsButton.current?.focus(); } }}>
-                    <button
+                    <Button variant="ghost"
                         type="button"
                         onClick={() =>
                             setNotificationsOpen((current) => !current)
@@ -251,10 +252,10 @@ export default function TopBar() {
                                 {unreadCount}
                             </span>
                         ) : null}
-                    </button>
+                    </Button>
 
                     {notificationsOpen ? (
-                        <div id="notifications-panel" role="region" aria-label="Notifications" className="absolute right-0 top-12 z-50 w-96 rounded-lg border border-slate-200 bg-white shadow-xl">
+                        <div id="notifications-panel" role="region" aria-label="Notifications" className="absolute right-0 top-12 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white shadow-xl">
                             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                                 <div>
                                     <p className="font-semibold text-slate-950">
@@ -347,12 +348,12 @@ export default function TopBar() {
                     ) : null}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="hidden items-center gap-2 text-sm text-gray-600 lg:flex">
                     <CalendarDays size={16}/>
                     {date}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="hidden items-center gap-2 text-sm text-gray-600 lg:flex">
                     <Clock size={16}/>
                     {time}
                 </div>

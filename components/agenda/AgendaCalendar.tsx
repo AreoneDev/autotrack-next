@@ -1,7 +1,9 @@
 "use client";
-
-import { useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { type DayButton } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { localDateInput } from "@/lib/date";
 
 type Props = {
     selectedDate: Date;
@@ -11,132 +13,38 @@ type Props = {
     todayDateString: string;
 };
 
-export default function AgendaCalendar({
-    selectedDate,
-    onSelectDate,
-    unfinishedTaskCount,
-    pastUnfinishedTaskCounts,
-    todayDateString,
-}: Props) {
-    const calendar = useRef<HTMLElement>(null);
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(firstDay.getDate() - firstDay.getDay());
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cellCount = Math.ceil((firstDay.getDay() + daysInMonth) / 7) * 7;
-    const days = Array.from({ length: cellCount }, (_, index) => {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + index);
-        return date;
-    });
-
-    function isSameDate(a: Date, b: Date) {
-        return a.toDateString() === b.toDateString();
+export default function AgendaCalendar({ selectedDate, onSelectDate, unfinishedTaskCount, pastUnfinishedTaskCounts, todayDateString }: Props) {
+    const region = useRef<HTMLElement>(null);
+    function navigateMonth(month: Date) {
+        const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        onSelectDate(new Date(month.getFullYear(), month.getMonth(), Math.min(selectedDate.getDate(), lastDay)));
     }
-
-    function formatDateKey(date: Date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-
-        return `${year}-${month}-${day}`;
+    function AgendaDay({ day, modifiers, ...props }: React.ComponentProps<typeof DayButton>) {
+        const ref = useRef<HTMLButtonElement>(null);
+        useEffect(() => { if (modifiers.focused) ref.current?.focus(); }, [modifiers.focused]);
+        const date = day.date;
+        const key = localDateInput(date);
+        const active = !!modifiers.selected;
+        const count = active ? unfinishedTaskCount : key < todayDateString ? pastUnfinishedTaskCounts[key] ?? 0 : 0;
+        return <Button {...props} aria-label={undefined} ref={ref} type="button" variant="ghost" data-date={key} aria-pressed={active}
+            className={`min-h-[66px] w-full flex-col items-start rounded-md p-2 ${active ? "bg-blue-100" : ""} ${modifiers.outside ? "text-slate-500" : "text-slate-700"}`}>
+            <span>{date.getDate()}<span className="sr-only"> {date.toLocaleDateString("en-CA", { month: "long", year: "numeric" })}</span></span>
+            {count > 0 && <span className={`mt-1 rounded-md px-2 py-1 text-xs text-white ${active ? "bg-green-700" : "bg-red-600"}`}>{count} undone</span>}
+        </Button>;
     }
-
-    function changeMonth(offset: number) {
-        const next = new Date(selectedDate);
-        const selectedDay = next.getDate();
-        next.setDate(1);
-        next.setMonth(next.getMonth() + offset);
-        const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-        next.setDate(Math.min(selectedDay, lastDay));
-        onSelectDate(next);
-    }
-
-    return (
-        <section ref={calendar} aria-label="Calendar" className="w-full rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-                <button
-                    onClick={() => changeMonth(-1)}
-                    className="rounded-lg border px-3 py-1"
-                    aria-label="Previous month"
-                >
-                    <ChevronLeft size={16} />
-                </button>
-
-                <h2 className="text-lg font-semibold">
-                    {selectedDate.toLocaleString("en-CA", {
-                        month: "long",
-                        year: "numeric",
-                    })}
-                </h2>
-
-                <button
-                    onClick={() => changeMonth(1)}
-                    className="rounded-lg border px-3 py-1"
-                    aria-label="Next month"
-                >
-                    <ChevronRight size={16} />
-                </button>
-            </div>
-
-            <div className="grid grid-cols-7 border-t border-l text-sm">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div key={day} className="border-r border-b bg-slate-50 p-2 font-medium">
-                        {day}
-                    </div>
-                ))}
-
-                {days.map((date) => {
-                    const active = isSameDate(date, selectedDate);
-                    const muted = date.getMonth() !== month;
-                    const dateKey = formatDateKey(date);
-                    const pastCount = pastUnfinishedTaskCounts[dateKey] ?? 0;
-                    const badgeCount = active
-                        ? unfinishedTaskCount
-                        : dateKey < todayDateString
-                          ? pastCount
-                          : 0;
-                    const badgeColor = active
-                        ? "bg-green-700"
-                        : "bg-red-600";
-
-                    return (
-                        <button
-                            key={date.toISOString()}
-                            data-date={dateKey}
-                            aria-pressed={active}
-                            tabIndex={active ? 0 : -1}
-                            onKeyDown={(event) => {
-                                const offsets: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
-                                if (!(event.key in offsets)) return;
-                                event.preventDefault();
-                                const next = new Date(date);
-                                next.setDate(next.getDate() + offsets[event.key]);
-                                onSelectDate(next);
-                                requestAnimationFrame(() => calendar.current?.querySelector<HTMLButtonElement>(`[data-date="${formatDateKey(next)}"]`)?.focus());
-                            }}
-                            onClick={() => onSelectDate(date)}
-                            className={`min-h-[66px] border-b border-r p-2 text-left hover:bg-blue-50 ${
-                                active ? "bg-blue-100" : ""
-                            } ${muted ? "text-slate-500" : "text-slate-700"}`}
-                        >
-                            <div className="font-medium">{date.getDate()}<span className="sr-only"> {date.toLocaleDateString("en-CA", { month: "long", year: "numeric" })}</span></div>
-
-                            {badgeCount > 0 && (
-                                <div id={`tasks-${dateKey}`}
-                                    className={`mt-2 rounded-md px-2 py-1 text-xs text-white ${badgeColor}`}
-                                >
-                                    {badgeCount} undone
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-        </section>
-    );
+    return <section ref={region} aria-label="Calendar" className="w-full rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <Calendar mode="single" required selected={selectedDate} month={selectedDate} onMonthChange={navigateMonth}
+            onSelect={(date) => onSelectDate(date)}
+            onDayKeyDown={(date, _modifiers, event) => {
+                const offsets: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+                if (!(event.key in offsets)) return;
+                const next = new Date(date);
+                next.setDate(next.getDate() + offsets[event.key]);
+                onSelectDate(next);
+                requestAnimationFrame(() => region.current?.querySelector<HTMLButtonElement>(`[data-date="${localDateInput(next)}"]`)?.focus());
+            }}
+            labels={{ labelPrevious: () => "Previous month", labelNext: () => "Next month" }}
+            components={{ DayButton: AgendaDay }}
+            className="w-full" classNames={{ months: "relative w-full", month: "w-full", month_grid: "w-full", weekdays: "flex", weekday: "flex-1 text-center text-sm text-slate-600", week: "flex w-full", day: "w-full border border-slate-100 p-0" }} />
+    </section>;
 }

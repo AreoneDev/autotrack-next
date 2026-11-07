@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { X } from "lucide-react";
 
@@ -20,13 +21,13 @@ export default function LeadBriefModal({ lead, onClose }: LeadBriefModalProps) {
                         Lead Brief
                     </h2>
 
-                    <button
+                    <Button variant="ghost"
                         onClick={onClose}
                         className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Close lead brief"
                     >
                         <X size={18} />
-                    </button>
+                    </Button>
                 </div>
 
                 <div className="space-y-3 text-sm text-gray-700">

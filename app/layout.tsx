@@ -13,7 +13,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" className="font-sans">
         <body className="h-screen overflow-hidden bg-gray-50 text-gray-900">
         <AuthGate>
             {children}

@@ -22,10 +22,11 @@ test("E2E-LEAD-01: create → search → change status → reload → delete", a
     await search.fill("BROWSER@EXAMPLE.TEST");
     await expect(customer).toBeVisible();
     const row = page.getByRole("row").filter({ has: customer });
-    await row.getByRole("combobox").selectOption("LOST");
+    await row.getByRole("combobox").click();
+    await page.getByRole("option", { name: "Lost", exact: true }).click();
     await expect(row.getByRole("combobox")).toBeEnabled();
     await page.reload();
-    await expect(row.getByRole("combobox")).toHaveValue("LOST");
+    await expect(row.getByRole("combobox")).toContainText("Lost");
     await row.getByRole("button", { name: "Delete Lead" }).click();
     await expect(customer).toHaveCount(0);
     await page.reload();

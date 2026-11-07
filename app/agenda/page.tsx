@@ -1,5 +1,10 @@
 "use client";
 
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { SelectField } from "@/components/ui/select-field";
+import { SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { type FormEvent, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -336,51 +341,52 @@ export default function AgendaPage() {
     }
 
     return (
-        <div className="flex min-w-80 flex-col gap-6 pb-6">
+        <div className="flex min-w-0 flex-col gap-6 pb-6">
 
             <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                    <button
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="ghost"
                         aria-label="Previous day"
                         onClick={() => changeDate(-1)}
                         className="rounded-lg border border-slate-200 p-2 hover:bg-slate-100"
                     >
                         <ChevronLeft size={18} />
-                    </button>
+                    </Button>
 
-                    <input
+                    <DateTimeField
                         type="date"
                         aria-label="Agenda date"
+                        allowEmpty={false}
                         value={formatDateInput(selectedDate)}
-                        onChange={(e) =>
-                            selectAgendaDate(createDateTime(e.target.value, "00:00"))
+                        onValueChange={(e) =>
+                            selectAgendaDate(createDateTime(e, "00:00"))
                         }
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="w-32 rounded-lg border border-slate-200 px-3 py-2 pr-9 text-sm sm:w-44"
                     />
 
-                    <button
+                    <Button variant="ghost"
                         aria-label="Next day"
                         onClick={() => changeDate(1)}
                         className="rounded-lg border border-slate-200 p-2 hover:bg-slate-100"
                     >
                         <ChevronRight size={18} />
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button variant="ghost"
                         onClick={() => selectAgendaDate(new Date())}
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                     >
                        Back to Today
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button variant="ghost"
                         onClick={() =>
                             setRefreshKey((currentKey) => currentKey + 1)
                         }
                         className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     >
                         Refresh
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -401,7 +407,7 @@ export default function AgendaPage() {
                             <label htmlFor="agenda-lead" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Lead
                             </label>
-                            <input
+                            <Input
                                 id="agenda-lead"
                                 type="search"
                                 aria-label="Lead"
@@ -425,7 +431,7 @@ export default function AgendaPage() {
 
                                     {!leadSearchLoading
                                         ? leadSearchResults.map((lead) => (
-                                              <button
+                                              <Button variant="ghost"
                                                   key={lead.leadID}
                                                   type="button"
                                                   onClick={() =>
@@ -440,7 +446,7 @@ export default function AgendaPage() {
                                                       {formatLeadDetails(lead) ||
                                                           `Lead #${lead.leadID}`}
                                                   </span>
-                                              </button>
+                                              </Button>
                                           ))
                                         : null}
                                 </div>
@@ -451,38 +457,38 @@ export default function AgendaPage() {
                             <label htmlFor="agenda-task-type" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Task Type
                             </label>
-                            <select
+                            <SelectField
                                 id="agenda-task-type"
                                 aria-label="Task type"
 
                                 value={newTaskType}
-                                onChange={(e) => {
-                                    setNewTaskType(e.target.value);
+                                onValueChange={(e) => {
+                                    setNewTaskType(e);
                                     setCreateError(null);
                                 }}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                             >
-                                <option value="" disabled>
+                                <SelectItem value="" disabled>
                                     Select task type
-                                </option>
+                                </SelectItem>
                                 {Task.TASK_TYPE_OPTIONS.map((taskType) => (
-                                    <option key={taskType} value={taskType}>
+                                    <SelectItem key={taskType} value={taskType}>
                                         {taskType}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+                            </SelectField>
                         </div>
 
                         <div>
                             <label htmlFor="agenda-task-date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Date
                             </label>
-                            <input
+                            <DateTimeField
                                 id="agenda-task-date"
                                 type="date"
                                 aria-label="Task date"
                                 value={newTaskDate}
-                                onChange={(e) => setNewTaskDate(e.target.value)}
+                                onValueChange={(e) => setNewTaskDate(e)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                             />
                         </div>
@@ -491,24 +497,24 @@ export default function AgendaPage() {
                             <label htmlFor="agenda-task-time" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Time
                             </label>
-                            <input
+                            <DateTimeField
                                 id="agenda-task-time"
                                 type="time"
                                 aria-label="Task time"
                                 value={newTaskTime}
-                                onChange={(e) => setNewTaskTime(e.target.value)}
+                                onValueChange={(e) => setNewTaskTime(e)}
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                             />
                         </div>
 
                         <div className="flex items-end">
-                            <button
+                            <Button variant="ghost"
                                 type="submit"
                                 disabled={creatingTask}
                                 className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {creatingTask ? "Creating..." : "Add Task"}
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -516,7 +522,7 @@ export default function AgendaPage() {
                         <label htmlFor="agenda-task-notes" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Short Description / Notes
                         </label>
-                        <input
+                        <Input
                             id="agenda-task-notes"
                             type="text"
                             value={newTaskNotes}

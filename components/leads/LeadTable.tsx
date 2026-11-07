@@ -1,5 +1,12 @@
 "use client";
 
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { SelectField } from "@/components/ui/select-field";
+import { SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
     type FormEvent,
     type PointerEvent,
@@ -538,7 +545,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                         <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                             Search
                         </h3>
-                        <input
+                        <Input
                             type="text"
                             aria-label="Search leads"
                             placeholder="Search by customer name, email, or phone"
@@ -555,62 +562,62 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             Basic Filters
                         </h3>
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            <select
+                            <SelectField
                                 aria-label="Filter by status"
                                 value={statusFilter}
-                                onChange={(event) =>
-                                    setStatusFilter(event.target.value)
+                                onValueChange={(event) =>
+                                    setStatusFilter(event)
                                 }
                                 className="rounded-lg border px-4 py-3 text-gray-900"
                             >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="LOST">Lost</option>
-                            </select>
+                                <SelectItem value="ALL">All Status</SelectItem>
+                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                <SelectItem value="LOST">Lost</SelectItem>
+                            </SelectField>
 
-                            <select
+                            <SelectField
                                 aria-label="Filter by stage"
                                 value={stageFilter}
-                                onChange={(event) =>
-                                    setStageFilter(event.target.value)
+                                onValueChange={(event) =>
+                                    setStageFilter(event)
                                 }
                                 className="rounded-lg border px-4 py-3 text-gray-900"
                             >
-                                <option value="ALL">All Stages</option>
-                                <option value="NEW">New</option>
-                                <option value="CONTACTED">Contacted</option>
-                                <option value="VISITED">Visited</option>
-                                <option value="TEST_DRIVE">Test Drive</option>
-                                <option value="NEGOTIATION">Negotiation</option>
-                                <option value="DELIVERED">Delivered</option>
-                            </select>
+                                <SelectItem value="ALL">All Stages</SelectItem>
+                                <SelectItem value="NEW">New</SelectItem>
+                                <SelectItem value="CONTACTED">Contacted</SelectItem>
+                                <SelectItem value="VISITED">Visited</SelectItem>
+                                <SelectItem value="TEST_DRIVE">Test Drive</SelectItem>
+                                <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
+                                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                            </SelectField>
 
-                            <select
+                            <SelectField
                                 aria-label="Filter by trade-in"
                                 value={tradeInFilter}
-                                onChange={(event) =>
-                                    setTradeInFilter(event.target.value)
+                                onValueChange={(event) =>
+                                    setTradeInFilter(event)
                                 }
                                 className="rounded-lg border px-4 py-3 text-gray-900"
                             >
-                                <option value="ALL">All Trade-in</option>
-                                <option value="YES">Yes</option>
-                                <option value="NO">No</option>
-                            </select>
+                                <SelectItem value="ALL">All Trade-in</SelectItem>
+                                <SelectItem value="YES">Yes</SelectItem>
+                                <SelectItem value="NO">No</SelectItem>
+                            </SelectField>
 
-                            <select
+                            <SelectField
                                 aria-label="Filter by score"
                                 value={scoreFilter}
-                                onChange={(event) =>
-                                    setScoreFilter(event.target.value)
+                                onValueChange={(event) =>
+                                    setScoreFilter(event)
                                 }
                                 className="rounded-lg border px-4 py-3 text-gray-900"
                             >
-                                <option value="ALL">All Scores</option>
-                                <option value="BELOW_50">Below 50</option>
-                                <option value="BETWEEN_50_79">50 - 79</option>
-                                <option value="ABOVE_80">80+</option>
-                            </select>
+                                <SelectItem value="ALL">All Scores</SelectItem>
+                                <SelectItem value="BELOW_50">Below 50</SelectItem>
+                                <SelectItem value="BETWEEN_50_79">50 - 79</SelectItem>
+                                <SelectItem value="ABOVE_80">80+</SelectItem>
+                            </SelectField>
                         </div>
                     </section>
 
@@ -647,12 +654,12 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                             <div className="flex items-end">
                                 {hasActiveFilters ? (
-                                    <button
+                                    <Button variant="ghost"
                                         onClick={clearFilters}
                                         className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                                     >
                                         Clear Filters
-                                    </button>
+                                    </Button>
                                 ) : (
                                     <div className="hidden lg:block" />
                                 )}
@@ -683,22 +690,22 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     </div>
                 ) : null}
 
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-100 text-gray-900">
-                    <tr>
-                        <th className="px-4 py-4">Lead Status</th>
-                        <th className="px-4 py-4">Name</th>
-                        <th className="px-4 py-4">Contact</th>
-                        <th className="px-4 py-4">Vehicle Interest</th>
-                        <th className="px-4 py-4">Trade-in Vehicle</th>
-                        <th className="px-4 py-4">Stage</th>
-                        <th className="px-4 py-4">Score</th>
-                        <th className="px-4 py-4">Last Contact</th>
-                        <th className="w-32 px-4 py-4 text-center">Actions</th>
-                    </tr>
-                    </thead>
+                <Table className="w-full text-left text-sm">
+                    <TableHeader className="bg-gray-100 text-gray-900">
+                    <TableRow>
+                        <TableHead className="px-4 py-4">Lead Status</TableHead>
+                        <TableHead className="px-4 py-4">Name</TableHead>
+                        <TableHead className="px-4 py-4">Contact</TableHead>
+                        <TableHead className="px-4 py-4">Vehicle Interest</TableHead>
+                        <TableHead className="px-4 py-4">Trade-in Vehicle</TableHead>
+                        <TableHead className="px-4 py-4">Stage</TableHead>
+                        <TableHead className="px-4 py-4">Score</TableHead>
+                        <TableHead className="px-4 py-4">Last Contact</TableHead>
+                        <TableHead className="w-32 px-4 py-4 text-center">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
 
-                    <tbody>
+                    <TableBody>
                     {filteredLeads.map((lead) => (
                         <LeadTableRow
                             key={lead.leadID}
@@ -716,17 +723,17 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     ))}
 
                     {filteredLeads.length === 0 ? (
-                        <tr>
-                            <td
+                        <TableRow>
+                            <TableCell
                                 colSpan={9}
                                 className="px-4 py-10 text-center text-sm text-slate-500"
                             >
                                 No leads match the selected filters.
-                            </td>
-                        </tr>
+                            </TableCell>
+                        </TableRow>
                     ) : null}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </Table>
             </div>
 
             <LeadBriefModal
@@ -734,7 +741,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                 onClose={() => setSelectedLead(null)}
             />
 
-            <button
+            <Button variant="ghost"
                 onClick={handleFabClick}
                 onPointerDown={handleFabPointerDown}
                 onPointerMove={handleFabPointerMove}
@@ -756,7 +763,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
             >
                 <Plus size={20} />
                 <span className="hidden sm:inline">New Lead</span>
-            </button>
+            </Button>
 
             {createOpen ? (
                 <Modal labelledBy="create-lead-title" onClose={() => setCreateOpen(false)} className="w-full max-w-2xl">
@@ -770,20 +777,20 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 </p>
                             </div>
 
-                            <button
+                            <Button variant="ghost"
                                 onClick={() => setCreateOpen(false)}
                                 className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                                 aria-label="Close create lead"
                             >
                                 <X size={18} />
-                            </button>
+                            </Button>
                         </div>
 
                         <form onSubmit={handleCreateLead} className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <label className="text-sm font-medium text-gray-700">
                                     First Name
-                                    <input
+                                    <Input
                                         value={newLead.firstName}
                                         onChange={(event) =>
                                             updateNewLead("firstName", event.target.value)
@@ -794,7 +801,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Last Name
-                                    <input
+                                    <Input
                                         value={newLead.lastName}
                                         onChange={(event) =>
                                             updateNewLead("lastName", event.target.value)
@@ -805,7 +812,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Phone
-                                    <input
+                                    <Input
                                         value={newLead.phone}
                                         onChange={(event) =>
                                             updateNewLead("phone", event.target.value)
@@ -816,7 +823,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Email
-                                    <input
+                                    <Input
                                         type="email"
                                         value={newLead.leadEmail}
                                         onChange={(event) =>
@@ -828,25 +835,25 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Stage
-                                    <select
+                                    <SelectField
                                         value={newLead.stage}
-                                        onChange={(event) =>
-                                            updateNewLead("stage", event.target.value)
+                                        onValueChange={(event) =>
+                                            updateNewLead("stage", event)
                                         }
                                         className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
                                     >
-                                        <option value="NEW">New</option>
-                                        <option value="CONTACTED">Contacted</option>
-                                        <option value="VISITED">Visited</option>
-                                        <option value="TEST_DRIVE">Test Drive</option>
-                                        <option value="NEGOTIATION">Negotiation</option>
-                                        <option value="CLOSED">Closed</option>
-                                    </select>
+                                        <SelectItem value="NEW">New</SelectItem>
+                                        <SelectItem value="CONTACTED">Contacted</SelectItem>
+                                        <SelectItem value="VISITED">Visited</SelectItem>
+                                        <SelectItem value="TEST_DRIVE">Test Drive</SelectItem>
+                                        <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
+                                        <SelectItem value="CLOSED">Closed</SelectItem>
+                                    </SelectField>
                                 </label>
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Budget
-                                    <input
+                                    <Input
                                         type="number"
                                         value={newLead.budget}
                                         onChange={(event) =>
@@ -858,13 +865,13 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Follow-up Date
-                                    <input
+                                    <DateTimeField
                                         type="date"
                                         value={newLead.followUpDate}
-                                        onChange={(event) =>
+                                        onValueChange={(event) =>
                                             updateNewLead(
                                                 "followUpDate",
-                                                event.target.value
+                                                event
                                             )
                                         }
                                         className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
@@ -874,7 +881,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                             <label className="block text-sm font-medium text-gray-700">
                                 Notes
-                                <textarea
+                                <Textarea
                                     value={newLead.notes}
                                     onChange={(event) =>
                                         updateNewLead("notes", event.target.value)
@@ -891,21 +898,21 @@ export default function LeadTable({ leads }: LeadTableProps) {
                             ) : null}
 
                             <div className="flex justify-end gap-3">
-                                <button
+                                <Button variant="ghost"
                                     type="button"
                                     onClick={() => setCreateOpen(false)}
                                     className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                                 >
                                     Cancel
-                                </button>
+                                </Button>
 
-                                <button
+                                <Button variant="ghost"
                                     type="submit"
                                     disabled={creatingLead}
                                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                                 >
                                     {creatingLead ? "Creating..." : "Create Lead"}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                 </Modal>

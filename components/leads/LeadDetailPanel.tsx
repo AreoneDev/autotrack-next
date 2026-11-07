@@ -1,5 +1,11 @@
 "use client";
 
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { SelectField } from "@/components/ui/select-field";
+import { SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/ui/Modal";
 
 import { useMemo, useState } from "react";
@@ -779,7 +785,7 @@ export default function LeadDetailPanel({
                             </p>
                             {!isEditing ? (
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    <button
+                                    <Button variant="ghost"
                                         onClick={() =>
                                             handleLogCommunication("call")
                                         }
@@ -790,8 +796,8 @@ export default function LeadDetailPanel({
                                         {loggingCommunication === "call"
                                             ? "Logging..."
                                             : "Call"}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button variant="ghost"
                                         onClick={() =>
                                             handleLogCommunication("email")
                                         }
@@ -802,8 +808,8 @@ export default function LeadDetailPanel({
                                         {loggingCommunication === "email"
                                             ? "Logging..."
                                             : "Email"}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button variant="ghost"
                                         onClick={() =>
                                             handleLogCommunication("message")
                                         }
@@ -814,7 +820,7 @@ export default function LeadDetailPanel({
                                         {loggingCommunication === "message"
                                             ? "Logging..."
                                             : "Message"}
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : null}
                         </div>
@@ -823,39 +829,39 @@ export default function LeadDetailPanel({
                     <div className="flex flex-wrap gap-2">
                         {isEditing ? (
                             <>
-                                <button
+                                <Button variant="ghost"
                                     onClick={handleCancel}
                                     disabled={saving}
                                     className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <X size={16} />
                                     Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button variant="ghost"
                                     onClick={handleSave}
                                     disabled={saving}
                                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                                 >
                                     <Save size={16} />
                                     {saving ? "Saving..." : "Save Changes"}
-                                </button>
+                                </Button>
                             </>
                         ) : (
                             <>
-                                <button
+                                <Button variant="ghost"
                                     onClick={() => setIsEditing(true)}
                                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                                 >
                                     <Pencil size={16} />
                                     Modify
-                                </button>
-                                <button
+                                </Button>
+                                <Button variant="ghost"
                                     onClick={() => setShowDeleteConfirm(true)}
                                     className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
                                 >
                                     <Trash2 size={16} />
                                     Delete
-                                </button>
+                                </Button>
                             </>
                         )}
                     </div>
@@ -930,7 +936,7 @@ export default function LeadDetailPanel({
                     <div className="mt-5 grid gap-4 md:grid-cols-2">
                         <label className="text-sm font-medium text-slate-700">
                             First Name
-                            <input
+                            <Input
                                 value={draftLead.firstName}
                                 onChange={(event) =>
                                     updateDraft("firstName", event.target.value)
@@ -940,7 +946,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Last Name
-                            <input
+                            <Input
                                 value={draftLead.lastName}
                                 onChange={(event) =>
                                     updateDraft("lastName", event.target.value)
@@ -950,7 +956,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Phone
-                            <input
+                            <Input
                                 value={draftLead.phone}
                                 onChange={(event) =>
                                     updateDraft("phone", event.target.value)
@@ -960,7 +966,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Email
-                            <input
+                            <Input
                                 value={draftLead.leadEmail}
                                 onChange={(event) =>
                                     updateDraft("leadEmail", event.target.value)
@@ -970,39 +976,39 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Stage
-                            <select
+                            <SelectField
                                 value={draftLead.stage}
-                                onChange={(event) =>
-                                    updateDraft("stage", event.target.value)
+                                onValueChange={(event) =>
+                                    updateDraft("stage", event)
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             >
                                 {stageOptions.map((stage) => (
-                                    <option key={stage} value={stage}>
+                                    <SelectItem key={stage} value={stage}>
                                         {stage}
-                                    </option>
+                                    </SelectItem>
                                 ))}
-                            </select>
+                            </SelectField>
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Status
-                            <select
+                            <SelectField
                                 value={draftLead.status ? "ACTIVE" : "LOST"}
-                                onChange={(event) =>
+                                onValueChange={(event) =>
                                     updateDraft(
                                         "status",
-                                        event.target.value === "ACTIVE"
+                                        event === "ACTIVE"
                                     )
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             >
-                                <option value="ACTIVE">Active</option>
-                                <option value="LOST">Lost</option>
-                            </select>
+                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                <SelectItem value="LOST">Lost</SelectItem>
+                            </SelectField>
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Budget
-                            <input
+                            <Input
                                 type="number"
                                 value={draftLead.budget}
                                 onChange={(event) =>
@@ -1013,7 +1019,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Score
-                            <input
+                            <Input
                                 type="number"
                                 min={0}
                                 value={draftLead.score}
@@ -1026,11 +1032,11 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Follow-up Date
-                            <input
+                            <DateTimeField
                                 type="date"
                                 value={draftLead.followUpDate}
-                                onChange={(event) =>
-                                    updateDraft("followUpDate", event.target.value)
+                                onValueChange={(event) =>
+                                    updateDraft("followUpDate", event)
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
@@ -1040,7 +1046,7 @@ export default function LeadDetailPanel({
                                 <p className="text-sm font-medium text-slate-700">
                                     Vehicle Interest
                                 </p>
-                                <button
+                                <Button variant="ghost"
                                     type="button"
                                     aria-label="Clear vehicle interest"
                                     onClick={() =>
@@ -1051,7 +1057,7 @@ export default function LeadDetailPanel({
                                     className="text-sm font-semibold text-slate-500 hover:text-red-600"
                                 >
                                     Clear
-                                </button>
+                                </Button>
                             </div>
                             <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
                                 <VehicleInterestSelector
@@ -1071,7 +1077,7 @@ export default function LeadDetailPanel({
                                 <p className="text-sm font-medium text-slate-700">
                                     Trade-in Vehicle
                                 </p>
-                                <button
+                                <Button variant="ghost"
                                     type="button"
                                     aria-label="Clear trade-in vehicle"
                                     onClick={() =>
@@ -1082,7 +1088,7 @@ export default function LeadDetailPanel({
                                     className="text-sm font-semibold text-slate-500 hover:text-red-600"
                                 >
                                     Clear
-                                </button>
+                                </Button>
                             </div>
                             <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
                                 <VehicleInterestSelector
@@ -1099,7 +1105,7 @@ export default function LeadDetailPanel({
                         </div>
                         <label className="text-sm font-medium text-slate-700">
                             Division
-                            <input
+                            <Input
                                 value={draftLead.leadDivision}
                                 onChange={(event) =>
                                     updateDraft("leadDivision", event.target.value)
@@ -1109,7 +1115,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700 md:col-span-2">
                             Address
-                            <input
+                            <Input
                                 value={draftLead.leadAddress}
                                 onChange={(event) =>
                                     updateDraft("leadAddress", event.target.value)
@@ -1119,7 +1125,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             City
-                            <input
+                            <Input
                                 value={draftLead.leadCity}
                                 onChange={(event) =>
                                     updateDraft("leadCity", event.target.value)
@@ -1129,7 +1135,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Province
-                            <input
+                            <Input
                                 value={draftLead.leadProvince}
                                 onChange={(event) =>
                                     updateDraft("leadProvince", event.target.value)
@@ -1139,7 +1145,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Postal Code
-                            <input
+                            <Input
                                 value={draftLead.leadPostalCode}
                                 onChange={(event) =>
                                     updateDraft(
@@ -1152,7 +1158,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Country
-                            <input
+                            <Input
                                 value={draftLead.leadCountry}
                                 onChange={(event) =>
                                     updateDraft("leadCountry", event.target.value)
@@ -1162,7 +1168,7 @@ export default function LeadDetailPanel({
                         </label>
                         <label className="text-sm font-medium text-slate-700 md:col-span-2">
                             Notes
-                            <textarea
+                            <Textarea
                                 value={draftLead.notes}
                                 onChange={(event) =>
                                     updateDraft("notes", event.target.value)
@@ -1301,57 +1307,57 @@ export default function LeadDetailPanel({
                                 </p>
                                 <div className="mt-3 space-y-3">
                                     <div className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_150px_120px_auto]">
-                                        <select
+                                        <SelectField
                                             aria-label="New task type"
 
                                             value={newTaskType}
-                                            onChange={(event) =>
-                                                setNewTaskType(event.target.value)
+                                            onValueChange={(event) =>
+                                                setNewTaskType(event)
                                             }
                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                         >
-                                            <option value="" disabled>
+                                            <SelectItem value="" disabled>
                                                 Select task type
-                                            </option>
+                                            </SelectItem>
                                             {Task.TASK_TYPE_OPTIONS.map(
                                                 (taskType) => (
-                                                    <option
+                                                    <SelectItem
                                                         key={taskType}
                                                         value={taskType}
                                                     >
                                                         {taskType}
-                                                    </option>
+                                                    </SelectItem>
                                                 )
                                             )}
-                                        </select>
-                                        <input
+                                        </SelectField>
+                                        <DateTimeField
                                             aria-label="New task date"
                                             type="date"
                                             value={newTaskDate}
-                                            onChange={(event) =>
-                                                setNewTaskDate(event.target.value)
+                                            onValueChange={(event) =>
+                                                setNewTaskDate(event)
                                             }
                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                         />
-                                        <input
+                                        <DateTimeField
                                             aria-label="New task time"
                                             type="time"
                                             value={newTaskTime}
-                                            onChange={(event) =>
-                                                setNewTaskTime(event.target.value)
+                                            onValueChange={(event) =>
+                                                setNewTaskTime(event)
                                             }
                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                         />
-                                        <button
+                                        <Button variant="ghost"
                                             onClick={handleCreateTask}
                                             disabled={creatingTask}
                                             className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                                         >
                                             <PlusCircle size={16} />
                                             {creatingTask ? "Adding..." : "Add"}
-                                        </button>
+                                        </Button>
                                     </div>
-                                    <input
+                                    <Input
                                         aria-label="New task notes"
                                         value={newTaskNotes}
                                         onChange={(event) =>
@@ -1377,7 +1383,7 @@ export default function LeadDetailPanel({
                                         >
                                             {isTaskEditing ? (
                                                 <div className="space-y-3">
-                                                    <input
+                                                    <Input
                                                         aria-label="Task title"
 
                                                         value={draftTaskTitle}
@@ -1388,7 +1394,7 @@ export default function LeadDetailPanel({
                                                         }
                                                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                     />
-                                                    <input
+                                                    <Input
                                                         aria-label="Task notes"
 
                                                         value={draftTaskNotes}
@@ -1401,39 +1407,39 @@ export default function LeadDetailPanel({
                                                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                     />
                                                     <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
-                                                        <input
+                                                        <DateTimeField
                                                             aria-label="Task date"
                                                             type="date"
                                                             value={draftTaskDate}
-                                                            onChange={(event) =>
+                                                            onValueChange={(event) =>
                                                                 setDraftTaskDate(
-                                                                    event.target.value
+                                                                    event
                                                                 )
                                                             }
                                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                         />
-                                                        <input
+                                                        <DateTimeField
                                                             aria-label="Task time"
                                                             type="time"
                                                             value={draftTaskTime}
-                                                            onChange={(event) =>
+                                                            onValueChange={(event) =>
                                                                 setDraftTaskTime(
-                                                                    event.target.value
+                                                                    event
                                                                 )
                                                             }
                                                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950"
                                                         />
                                                     </div>
                                                     <div className="flex flex-wrap justify-end gap-2">
-                                                        <button
+                                                        <Button variant="ghost"
                                                             onClick={cancelEditingTask}
                                                             disabled={isTaskUpdating}
                                                             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
                                                             <X size={15} />
                                                             Cancel
-                                                        </button>
-                                                        <button
+                                                        </Button>
+                                                        <Button variant="ghost"
                                                             onClick={() =>
                                                                 handleSaveTask(
                                                                     task.taskID
@@ -1446,7 +1452,7 @@ export default function LeadDetailPanel({
                                                             {isTaskUpdating
                                                                 ? "Saving..."
                                                                 : "Save"}
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1466,7 +1472,7 @@ export default function LeadDetailPanel({
                                                     </div>
 
                                                     <div className="flex flex-wrap items-center justify-end gap-2">
-                                                        <button
+                                                        <Button variant="ghost"
                                                             onClick={() =>
                                                                 toggleTaskCompletion(
                                                                     task.taskID
@@ -1489,8 +1495,8 @@ export default function LeadDetailPanel({
                                                             {task.completed
                                                                 ? "Completed"
                                                                 : "Uncompleted"}
-                                                        </button>
-                                                        <button
+                                                        </Button>
+                                                        <Button variant="ghost"
                                                             onClick={() =>
                                                                 startEditingTask(task)
                                                             }
@@ -1500,8 +1506,8 @@ export default function LeadDetailPanel({
                                                             aria-label={`Edit task ${task.title}`}
                                                         >
                                                             <Pencil size={17} />
-                                                        </button>
-                                                        <button
+                                                        </Button>
+                                                        <Button variant="ghost"
                                                             onClick={() =>
                                                                 handleDeleteTask(
                                                                     task.taskID
@@ -1513,7 +1519,7 @@ export default function LeadDetailPanel({
                                                             aria-label={`Delete task ${task.title}`}
                                                         >
                                                             <Trash2 size={17} />
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1575,20 +1581,20 @@ export default function LeadDetailPanel({
                         </p>
 
                         <div className="mt-6 flex justify-end gap-3">
-                            <button
+                            <Button variant="ghost"
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={deleting}
                                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button variant="ghost"
                                 onClick={handleDelete}
                                 disabled={deleting}
                                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
                             >
                                 {deleting ? "Deleting..." : "Delete Lead"}
-                            </button>
+                            </Button>
                         </div>
                 </Modal>
             )}
