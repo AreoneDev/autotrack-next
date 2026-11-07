@@ -107,8 +107,13 @@ const server = createServer(async (request, response) => {
         }
         if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            if (typeof body.password !== "string" || body.password.length < 8) return send(422, { code: "weak_password", msg: "Weak password" });
-            accountPassword = body.password;
+            if (typeof body.password === "string") {
+                if (body.password.length < 8) return send(422, { code: "weak_password", msg: "Weak password" });
+                accountPassword = body.password;
+            }
+            if (body.data && typeof body.data === "object" && !Array.isArray(body.data)) {
+                user.user_metadata = { ...user.user_metadata, ...body.data };
+            }
             return send(200, user);
         }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
@@ -127,11 +132,6 @@ const server = createServer(async (request, response) => {
         }
         if (url.pathname === "/auth/v1/user" && request.method === "GET") {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            return send(200, user);
-        }
-        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
-            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            user.user_metadata = { ...user.user_metadata, ...body.data };
             return send(200, user);
         }
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });

@@ -28,6 +28,11 @@ test("forgot password completes a PKCE callback and changes the synthetic passwo
     await expect(page.getByRole("status")).toHaveText("Your password has been updated.");
     await page.getByRole("link", { name: "Continue to AutoTrack" }).click();
     await expect(page).toHaveURL("/dashboard");
+    if ((page.viewportSize()?.width ?? 0) < 768) {
+        await page.getByRole("button", { name: "Open navigation" }).click();
+    } else {
+        await page.getByRole("button", { name: /ada@example.test/ }).click();
+    }
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
     await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
