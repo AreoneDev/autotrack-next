@@ -4,6 +4,7 @@ import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRe
 import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { scriptedClient } from "@/tests/helpers/supabase";
 import { makeLead, makeTask, makeNotification } from "@/tests/fixtures/domain";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 
@@ -40,7 +41,6 @@ it.each(["lead detail", "task detail", "notification detail"])("%s preserves gen
 
 it.each([
     ["update lead", (db: ReturnType<typeof scriptedClient>) => new LeadRepo(db.client).updateLead(makeLead())],
-    ["delete lead", (db: ReturnType<typeof scriptedClient>) => new LeadRepo(db.client).deleteLead(1)],
     ["insert task", (db: ReturnType<typeof scriptedClient>) => new TaskRepo(db.client).insertTask(makeTask())],
     ["complete task", (db: ReturnType<typeof scriptedClient>) => new TaskRepo(db.client).updateTaskCompletion(1, true)],
     ["delete task", (db: ReturnType<typeof scriptedClient>) => new TaskRepo(db.client).deleteTask(1)],
@@ -53,4 +53,11 @@ it.each([
     expect(db.queries[0].insert).not.toHaveBeenCalled();
     expect(db.queries[0].update).not.toHaveBeenCalled();
     expect(db.queries[0].delete).not.toHaveBeenCalled();
+});
+
+it("delete lead reports an uncertain RPC failure without attempting fallback writes", async () => {
+    const rpc = jest.fn().mockRejectedValue(new Error("Unavailable"));
+    const client = { rpc } as unknown as SupabaseClient;
+    await expect(new LeadRepo(client).deleteLead(1)).resolves.toContain("Unable to confirm customer deletion");
+    expect(rpc).toHaveBeenCalledWith("autotrack_delete_lead", { p_lead_id: 1 });
 });
