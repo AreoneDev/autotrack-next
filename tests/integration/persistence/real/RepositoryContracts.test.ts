@@ -50,26 +50,22 @@ describe("DB — repository mapping and failure contracts", () => {
         expect(target.getHours()).toBe(15);
     });
 
-    it("DB-LEAD-06: absent leads cannot be updated or deleted", async () => {
-        const db = scriptedClient([{}, {}]);
+    it("DB-LEAD-06: absent leads cannot be updated", async () => {
+        const db = scriptedClient([{}]);
         const repo = new LeadRepo(db.client);
         expect(await repo.updateLead(makeLead())).toBe("Lead not found.");
-        expect(await repo.deleteLead(1)).toBe("Lead not found.");
         db.queries.forEach((query) => {
             expect(query.update).not.toHaveBeenCalled();
             expect(query.delete).not.toHaveBeenCalled();
         });
     });
 
-    it("DB-LEAD-07: update and delete use the requested lead id", async () => {
-        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, {}, { data: { lead_id: 7, first_name: "Ada" } }, {}]);
+    it("DB-LEAD-07: update uses the requested lead id", async () => {
+        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, {}]);
         const repo = new LeadRepo(db.client);
         expect(await repo.updateLead(makeLead({ leadID: 7, status: false }))).toBeNull();
         expect(db.queries[1].update).toHaveBeenCalledWith(expect.objectContaining({ lead_id: 7, status: false }));
         expect(db.queries[1].eq).toHaveBeenCalledWith("lead_id", 7);
-        expect(await repo.deleteLead(7)).toBeNull();
-        expect(db.queries[3].delete).toHaveBeenCalled();
-        expect(db.queries[3].eq).toHaveBeenCalledWith("lead_id", 7);
     });
 
     it("DB-NOTIF-01: notifications map timestamps and optional lead references", async () => {

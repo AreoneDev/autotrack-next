@@ -70,6 +70,7 @@ try {
         sql(readFileSync(join(migrationDir, name), "utf8"));
     }
     sql(readFileSync(join(root, "tests/supabase/migration-checks.sql"), "utf8"));
+    sql(readFileSync(join(root, "tests/supabase/delete-integrity.sql"), "utf8"));
     mkdirSync(join(root, "test-results"), { recursive: true });
     run(process.execPath, [
         join(root, "node_modules/jest/bin/jest.js"),

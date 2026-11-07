@@ -215,17 +215,24 @@ export class LeadRepo {
     }
 
     async deleteLead(id: number): Promise<string | null> {
-        const existingLead = await this.getLeadById(id);
-
-        if (!existingLead) {
-            return "Lead not found.";
+        if (!Number.isSafeInteger(id) || id <= 0) {
+            return "Invalid customer ID. Refresh the list before trying again.";
         }
 
-        const { error } = await this.client
-            .from(TABLE_NAME)
-            .delete()
-            .eq("lead_id", id);
+        // The database checks ownership and deletes dependencies in one transaction.
+        // Never fall back to independent table deletes: a failure must roll back all rows.
+        try {
+            const { error } = await this.client.rpc("autotrack_delete_lead", {
+                p_lead_id: id,
+            });
 
-        return error?.message ?? null;
+            if (error?.code === "PGRST202" || error?.code === "42883") {
+                return "Customer deletion is unavailable. Please contact support to apply the required database migration.";
+            }
+
+            return error?.message ?? null;
+        } catch {
+            return "Unable to confirm customer deletion. Refresh the list to check its current state before trying again.";
+        }
     }
 }
