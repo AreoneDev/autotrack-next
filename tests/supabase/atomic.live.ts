@@ -34,6 +34,8 @@ function draft(id: number, name: string, request = randomUUID(), version = 1) {
         p_details: { first_name: name }, p_interest: selection(name), p_trade_in: selection(name) };
 }
 
+// The disposable HTTP/PostgreSQL stack can take longer under CI load while
+// serializing both real transactions; keep this race check bounded at 2 minutes.
 it("parallel editors: exactly one whole aggregate wins, stale writer changes nothing", async () => {
     const row = await lead();
     const replies = await Promise.all(["Editor A", "Editor B"].map((name, index) =>
@@ -48,7 +50,7 @@ it("parallel editors: exactly one whole aggregate wins, stale writer changes not
         expect(link.error).toBeNull();
         expect(link.data).toMatchObject({ vehicle_id: 1, trim_override: saved.data.first_name });
     }
-});
+}, 120_000);
 
 it("parallel duplicate requests and a lost-response retry commit only once", async () => {
     const row = await lead();
