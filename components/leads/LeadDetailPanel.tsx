@@ -13,7 +13,6 @@ import { localDateInput } from "@/lib/date";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Bell,
     CalendarClock,
     Car,
     Check,
@@ -44,6 +43,7 @@ import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
 import VehicleInterestSelector from "@/components/leads/VehicleInterestSelector";
+import ContactHistoryPanel from "@/components/leads/ContactHistoryPanel";
 
 export interface LeadDetailTaskViewModel {
     taskID: number;
@@ -372,6 +372,22 @@ export default function LeadDetailPanel({
         );
 
         setLeadTasks(sortTasksByNewest(refreshedTasks.map(toTaskViewModel)));
+    }
+
+    async function refreshAfterContact() {
+        await reloadLeadTasks();
+        const refreshed = await new LeadRepo().getLeadById(currentLead.leadID);
+        if (!refreshed) throw new Error("Could not reload the lead summary.");
+        const priority = scoringService.calculatePriority(refreshed);
+        const summary = {
+            lastInteractionDate: refreshed.lastInteractionDate ? toTaskDateInputValue(refreshed.lastInteractionDate) : "",
+            lastInteractionBy: refreshed.lastInteractionBy,
+            followUpDate: toTaskDateInputValue(refreshed.followUpDate),
+            score: priority.score, priorityLevel: priority.level, priorityReasons: priority.reasons,
+        };
+        setCurrentLead(previous => ({ ...previous, ...summary }));
+        setDraftLead(previous => ({ ...previous, ...summary }));
+        router.refresh();
     }
 
     const fullName = useMemo(
@@ -1536,38 +1552,7 @@ export default function LeadDetailPanel({
                         </div>
                     </section>
 
-                    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-bold text-slate-950">
-                            Notifications
-                        </h3>
-
-                        <div className="mt-5 space-y-3">
-                            {leadNotifications.map((notification) => (
-                                <div
-                                    key={notification.notificationID}
-                                    className="flex gap-3 rounded-lg border border-slate-200 p-4"
-                                >
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                                        <Bell size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-slate-950">
-                                            {notification.title}
-                                        </p>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            {formatDisplayDate(notification.date)}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {leadNotifications.length === 0 ? (
-                                <p className="text-sm text-slate-500">
-                                    No notifications for this lead.
-                                </p>
-                            ) : null}
-                        </div>
-                    </section>
+                    <ContactHistoryPanel leadID={currentLead.leadID} reloadKey={leadNotifications.length} onSaved={refreshAfterContact} />
                 </>
             ) : null}
 
