@@ -7,6 +7,22 @@ import { scriptedClient } from "@/tests/helpers/supabase";
 jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 
 describe("DB — repository mapping and failure contracts", () => {
+    it.each([" closed ", " delivered "])("legacy %s reads remain untouched; explicit writes normalize terminal state", async (stage) => {
+        const row = { lead_id: 7, first_name: "Legacy", stage, status: true, score: 200 };
+        const db = scriptedClient([{ data: row }, { data: row }, {}]);
+        const repo = new LeadRepo(db.client);
+        const lead = (await repo.getLeadById(7))!;
+        expect(lead).toMatchObject({ stage, status: true, score: 200 });
+        expect(lead.isActive()).toBe(false);
+        expect(db.queries).toHaveLength(1);
+        expect(db.queries[0].update).not.toHaveBeenCalled();
+        expect(await repo.updateLead(lead)).toBeNull();
+        expect(db.queries[2].update).toHaveBeenCalledWith(expect.objectContaining({
+            stage: stage.trim().toUpperCase(), status: false, score: 0,
+        }));
+        expect(lead).toMatchObject({ stage, status: true, score: 200 });
+    });
+
     it("DB-LEAD-01: nullable columns map to domain defaults without losing false or zero", async () => {
         const db = scriptedClient([{ data: { lead_id: 7, first_name: " Ada ", last_name: null, status: false, budget: 0, stage: null } }]);
         const lead = await new LeadRepo(db.client).getLeadById(7);
@@ -50,33 +66,29 @@ describe("DB — repository mapping and failure contracts", () => {
         expect(target.getHours()).toBe(15);
     });
 
-    it("DB-LEAD-06: absent leads cannot be updated or deleted", async () => {
-        const db = scriptedClient([{}, {}]);
+    it("DB-LEAD-06: absent leads cannot be updated", async () => {
+        const db = scriptedClient([{}]);
         const repo = new LeadRepo(db.client);
         expect(await repo.updateLead(makeLead())).toBe("Lead not found.");
-        expect(await repo.deleteLead(1)).toBe("Lead not found.");
         db.queries.forEach((query) => {
             expect(query.update).not.toHaveBeenCalled();
             expect(query.delete).not.toHaveBeenCalled();
         });
     });
 
-    it("DB-LEAD-07: update and delete use the requested lead id", async () => {
-        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, {}, { data: { lead_id: 7, first_name: "Ada" } }, {}]);
+    it("DB-LEAD-07: update uses the requested lead id", async () => {
+        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, {}]);
         const repo = new LeadRepo(db.client);
         expect(await repo.updateLead(makeLead({ leadID: 7, status: false }))).toBeNull();
         expect(db.queries[1].update).toHaveBeenCalledWith(expect.objectContaining({ lead_id: 7, status: false }));
         expect(db.queries[1].eq).toHaveBeenCalledWith("lead_id", 7);
-        expect(await repo.deleteLead(7)).toBeNull();
-        expect(db.queries[3].delete).toHaveBeenCalled();
-        expect(db.queries[3].eq).toHaveBeenCalledWith("lead_id", 7);
     });
 
     it("DB-NOTIF-01: notifications map timestamps and optional lead references", async () => {
         const db = scriptedClient([{ data: [
             { notification_id: 1, lead_id: null, title: null, date: "2026-06-20T14:30:00Z" },
             { notification_id: 2, lead_id: 7, title: "Incoming call", date: "2026-06-20T15:30:00Z" },
-        ] }]);
+        ] }, { data: [] }]);
         const result = await new NotificationRepo(db.client).getAllNotifications();
         expect(result[0].getLead()).toBeNull();
         expect(result[0].getTitle()).toBe("");
@@ -121,11 +133,11 @@ describe("DB — repository mapping and failure contracts", () => {
         if (method === "searchTrims") expect(db.queries[0].ilike).toHaveBeenCalledWith("model", "RAV4");
     });
 
-    it("DB-ERR-01: read failures follow the empty/null repository contract", async () => {
+    it("DB-ERR-01: collection failures reject; other read contracts are unchanged", async () => {
         const db = scriptedClient(Array.from({ length: 6 }, () => ({ error: { message: "Unavailable" } })));
-        expect(await new LeadRepo(db.client).getAllLeads()).toEqual([]);
+        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Unavailable");
         expect(await new LeadRepo(db.client).getLeadById(1)).toBeNull();
-        expect(await new NotificationRepo(db.client).getAllNotifications()).toEqual([]);
+        await expect(new NotificationRepo(db.client).getAllNotifications()).rejects.toThrow("Unavailable");
         expect(await new NotificationRepo(db.client).getNotificationById(1)).toBeNull();
         expect(await new VehicleRepo(db.client).getAllVehicles()).toEqual([]);
         expect(await new VehicleRepo(db.client).getVehicleById(1)).toBeNull();

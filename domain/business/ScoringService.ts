@@ -1,4 +1,5 @@
 import { Lead } from "@/domain/objects/Lead";
+import { normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 import { Task } from "@/domain/objects/Task";
 
 export type LeadPriorityLevel = "HOT" | "HIGH" | "MEDIUM" | "LOW" | "CLOSED";
@@ -33,7 +34,7 @@ export class ScoringService {
                 score: 0,
                 level: "CLOSED",
                 hasStrongBuyingIntent: false,
-                reasons: ["Lead is closed and excluded from active follow-up."],
+                reasons: ["Lead is inactive and excluded from active follow-up."],
             };
         }
 
@@ -496,17 +497,11 @@ export class ScoringService {
     }
 
     private isClosedLead(lead: Lead): boolean {
-        return this.normalizeStage(lead.stage) === "CLOSED";
+        return lead.isClosed();
     }
 
     private normalizeStage(stage: string | null | undefined): string {
-        const normalizedStage = stage ? stage.toUpperCase() : "DEFAULT";
-
-        if (normalizedStage === "DELIVERED") {
-            return "CLOSED";
-        }
-
-        return normalizedStage;
+        return stage ? normalizeLeadStage(stage) : "DEFAULT";
     }
 
     private getMissionNameByDay(day: number): string {

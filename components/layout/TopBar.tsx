@@ -52,6 +52,7 @@ function getActivityIcon(type: RecentActivityType) {
 export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => void }) {
     const pageInfoMap: Record<string, { title: string; description: string }> = {
         "/settings": { title: "Settings", description: "Manage your personal AutoTrack account." },
+        "/data": { title: "Customer data", description: "Export your records and restore deleted customers." },
         "/dashboard": {
             title: "Dashboard",
             description: "Overview of today's priorities and follow-up actions.",

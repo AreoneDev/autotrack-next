@@ -1,4 +1,7 @@
 import { ScoringService } from "@/domain/business/ScoringService";
+import { AgendaService } from "@/domain/business/AgendaService";
+import { DashboardService } from "@/domain/business/DashboardService";
+import { PriorityManager } from "@/domain/business/PriorityManager";
 import { makeLead, referenceDate } from "@/tests/fixtures/domain";
 
 describe("SC — scoring boundary value analysis", () => {
@@ -36,5 +39,28 @@ describe("SC — scoring boundary value analysis", () => {
 
     it("SC-04: time decay never produces a negative score", () => {
         expect(service.calculateScore(makeLead({ stage: "NEW", createdAt: new Date(2020, 0, 1) }))).toBe(0);
+    });
+
+    it("lost leads never receive a score or automatic follow-up, even with an active stage", () => {
+        const lead = makeLead({ status: false, stage: "NEGOTIATION", score: 200, notes: "ready urgent" });
+        expect(service.calculateScore(lead)).toBe(0);
+        expect(service.calculatePriority(lead)).toMatchObject({ score: 0, level: "CLOSED" });
+        expect(service.generateTimeline(lead)).toEqual([]);
+        expect(service.getScientificMission(lead, referenceDate)).toBeNull();
+        expect(service.getSilentMilestoneForDate(lead, referenceDate)).toBeNull();
+        expect(service.shouldCreateInitialGratitudeTask(lead, lead.createdAt)).toBe(false);
+    });
+
+    it("lost leads stay out of priority lists, dashboard recommendations and generated agenda tasks", () => {
+        const lead = makeLead({ status: false, stage: "NEGOTIATION", score: 200, createdAt: referenceDate, followUpDate: referenceDate });
+        const priorities = new PriorityManager(service);
+        const agenda = new AgendaService(service, priorities);
+        const dashboard = new DashboardService(service, agenda);
+        expect(priorities.getPrioritizedList([lead])).toEqual([]);
+        expect(agenda.getTodayAgenda([lead], [], referenceDate)).toEqual([]);
+        expect(agenda.getSystemAssignedTasks([lead], [], referenceDate)).toEqual([]);
+        expect(agenda.getMissingSystemAssignedTasksUpToDate([lead], [], referenceDate)).toEqual([]);
+        expect(dashboard.getHighPriorityLeads([lead])).toEqual([]);
+        expect(dashboard.getPriorityActions([lead], [], [], referenceDate)).toEqual([]);
     });
 });
