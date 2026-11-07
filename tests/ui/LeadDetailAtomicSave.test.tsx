@@ -14,6 +14,7 @@ jest.mock("@/components/leads/VehicleInterestSelector", () => ({
             onChange={event => onChange({ year: "2026", make: "Synthetic", model: "Catalogue", trim: event.target.value })} />,
 }));
 const rpc = jest.mocked(supabase.rpc);
+const from = supabase.from as unknown as jest.Mock;
 const success = { data: { version: 8, vehicle_interest_id: 11, trade_in_vehicle_id: 12 }, error: null };
 const fixture: LeadDetailViewModel = {
     leadID: 1, version: 7, firstName: "Before", lastName: "Customer", phone: "4165550100", leadEmail: "a@example.test",
@@ -38,7 +39,7 @@ const save = () => fireEvent.click(screen.getByRole("button", { name: "Save Chan
 const expectNoUnexpectedSupabaseTables = () => {
     // Contact history is loaded from notifications when the panel mounts.
     // These checks concern writes from the save flow, not that independent read.
-    expect(supabase.from.mock.calls.every(([table]) => table === "notifications")).toBe(true);
+    expect(from.mock.calls.every(([table]) => table === "notifications")).toBe(true);
 };
 
 it("keeps draft on failure; unchanged retry uses one RPC with the same request/version", async () => {
