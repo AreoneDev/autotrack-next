@@ -7,7 +7,7 @@ insert into auth.users(id, email) values
 
 create function pg_temp.fail_contact_update() returns trigger language plpgsql as $$
 begin
-  if new.phone = 'ROLLBACK' and new.last_interaction_date is distinct from old.last_interaction_date then
+  if new.phone = '+14165550999' and new.last_interaction_date is distinct from old.last_interaction_date then
     raise exception 'Synthetic lead update failure';
   end if;
   return new;
@@ -80,7 +80,7 @@ begin
   end loop;
 
   -- Fail after notification insertion: the whole RPC must roll back.
-  update public.leads set phone = 'ROLLBACK' where lead_id = v_lead.lead_id returning * into v_saved;
+  update public.leads set phone = '+14165550999' where lead_id = v_lead.lead_id returning * into v_saved;
   begin
     perform public.autotrack_log_communication(v_lead.lead_id, '88888888-8888-4888-8888-888888888889',
         'call', v_time + interval '1 second', v_saved.version, 35);
