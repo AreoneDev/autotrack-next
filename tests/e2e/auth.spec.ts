@@ -36,7 +36,7 @@ test("E2E-AUTH-02: login, authenticated navigation, and logout", async ({ page }
         await expect(page.getByRole("dialog", { name: "Navigation" })).toHaveCount(0);
         await expect(openNavigation).toBeFocused();
         await openNavigation.click();
-    } else await page.getByRole("button", { name: "Account", exact: true }).click();
+    } else await page.getByRole("button", { name: "Account" }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
     await page.goto("/leads");
@@ -50,7 +50,7 @@ test("account settings persists a display name and guards unsaved edits", async 
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL("/dashboard");
     if ((page.viewportSize()?.width ?? 0) < 768) await page.getByRole("button", { name: "Open navigation" }).click();
-    else await page.getByRole("button", { name: "Account", exact: true }).click();
+    else await page.getByRole("button", { name: "Account" }).click();
     await page.getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL("/settings");
     const input = page.getByLabel("Display name");
