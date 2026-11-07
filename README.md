@@ -17,6 +17,15 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Turbopack builds in restricted environments
+
+`npm run build` uses Turbopack. Its PostCSS workers communicate over local
+loopback sockets. An execution sandbox that blocks child processes from
+connecting to `127.0.0.1` can cause a build to report that a Node process exited
+before Turbopack connected to it. Run the build in an environment that permits
+local loopback connections between the build process and its children. This
+does not require changing the project's bundler or exposing a network service.
+
 ## Continuous integration
 
 Test commands and the risk-based test inventory are documented in

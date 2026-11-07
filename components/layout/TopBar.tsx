@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import AccountMenu from "@/components/auth/AccountMenu";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -12,6 +11,7 @@ import {
     CheckCircle2,
     Clock,
     Mail,
+    Menu,
     MessageSquareReply,
     Phone,
     PlusCircle,
@@ -49,8 +49,9 @@ function getActivityIcon(type: RecentActivityType) {
     }
 }
 
-export default function TopBar() {
+export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => void }) {
     const pageInfoMap: Record<string, { title: string; description: string }> = {
+        "/settings": { title: "Settings", description: "Manage your personal AutoTrack account." },
         "/data": { title: "Customer data", description: "Export your records and restore deleted customers." },
         "/dashboard": {
             title: "Dashboard",
@@ -222,13 +223,16 @@ export default function TopBar() {
     return (
         <header className="flex h-20 shrink-0 items-center justify-between gap-2 border-b bg-white px-4 sm:px-8">
 
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+                <Button variant="ghost" type="button" aria-label="Open navigation" aria-haspopup="dialog" onClick={onOpenNavigation} className="md:hidden"><Menu size={20} /></Button>
+                <div className="min-w-0">
                 <h1 id="page-title" className="truncate text-xl font-bold text-slate-950 sm:text-2xl">
                     {pageInfo.title}
                 </h1>
                 <p className="hidden text-sm text-slate-500 sm:block">
                     {pageInfo.description}
                 </p>
+                </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4 lg:gap-8">
@@ -359,7 +363,6 @@ export default function TopBar() {
                     {time}
                 </div>
 
-                <AccountMenu />
 
             </div>
 

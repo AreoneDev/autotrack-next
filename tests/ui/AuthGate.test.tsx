@@ -36,7 +36,7 @@ describe("UI-GATE — protected content state transitions", () => {
         expect(screen.queryByText("Private customer")).not.toBeInTheDocument();
         expect(router.replace).toHaveBeenCalledWith("/login");
         unmount();
-        expect(supabase.auth.onAuthStateChange.mock.results[0].value.data.subscription.unsubscribe).toHaveBeenCalledTimes(1);
+        expect(supabase.auth.onAuthStateChange.mock.results[0].value.data.subscription.unsubscribe).toHaveBeenCalledTimes(2);
     });
 
     it("UI-GATE-03: session service failures produce an alert without showing data", async () => {

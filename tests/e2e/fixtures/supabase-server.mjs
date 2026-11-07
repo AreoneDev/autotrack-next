@@ -15,6 +15,7 @@ let tables;
 let nextId;
 let failure;
 function reset(seed = {}) {
+    user.user_metadata = {};
     tables = {
         leads: [], tasks: [], notifications: [], vehicles: [],
         lead_vehicle_interests: [], lead_trade_in_vehicles: [],
@@ -69,7 +70,7 @@ function filterRows(rows, search) {
 const server = createServer(async (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", `http://127.0.0.1:${appPort}`);
     response.setHeader("Access-Control-Allow-Headers", "*");
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     response.setHeader("Content-Type", "application/json");
     const send = (status, data) => { response.writeHead(status); response.end(JSON.stringify(data)); };
     if (request.method === "OPTIONS") return send(200, {});
@@ -96,6 +97,11 @@ const server = createServer(async (request, response) => {
         }
         if (url.pathname === "/auth/v1/user" && request.method === "GET") {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
+            return send(200, user);
+        }
+        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
+            user.user_metadata = { ...user.user_metadata, ...body.data };
             return send(200, user);
         }
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
