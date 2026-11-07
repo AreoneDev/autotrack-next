@@ -54,3 +54,12 @@ npx playwright test --config tests/contact-history/playwright.config.ts --projec
 ```
 
 Verified on 2026-11-07: 43 focused Jest checks (contact form/repository plus notification regressions), 14 standalone embedded database checks, 16 checks with both peer migrations, desktop and mobile Chromium journeys including zero Axe violations in the new form, production Webpack build, TypeScript and lint of changed code. No migration was applied to a hosted project and no branch was merged or deployed. The original cross-drive dependency junction caused a Windows build-resolution failure; validation used a local copy of only the Next package with other dependencies linked, keeping the shared checkout untouched. An interrupted full dependency installation was removed from this task's worktree.
+
+For the integrated contact-history and reply-state branches, run without the separate
+quick-contact migration using `-` as the first argument:
+
+```powershell
+node tests/contact-history/database.mjs - supabase/migrations/20261107140000_notification_reply_state.sql
+```
+
+This includes acknowledgement ownership, anonymous access and idempotency checks.

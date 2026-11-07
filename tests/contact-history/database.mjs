@@ -5,7 +5,8 @@ import { PGlite } from "../../.test-runtime/node_modules/@electric-sql/pglite/di
 
 const db = new PGlite();
 // Optional peer migration paths allow integration verification without merging branches.
-const [syncMigrationPath, replyMigrationPath] = process.argv.slice(2);
+const [syncArgument, replyMigrationPath] = process.argv.slice(2);
+const syncMigrationPath = syncArgument === "-" ? undefined : syncArgument;
 let passed = 0;
 const a = "11111111-1111-4111-8111-111111111111";
 const b = "22222222-2222-4222-8222-222222222222";
@@ -99,6 +100,17 @@ try {
         assert.equal(outgoing.replied_at, null);
         assert.deepEqual((await rows("select replied_at from public.notifications where notification_id=$1", [first.notification_id]))[0], before);
         await rejected(() => db.query("select public.mark_notification_replied($1)", [outgoing.notification_id]), "P0001");
+    });
+    await test("reply acknowledgement enforces ownership and is idempotent", async () => {
+        const [before] = await rows("select replied_at from public.notifications where notification_id=$1", [first.notification_id]);
+        await db.query("select public.mark_notification_replied($1)", [first.notification_id]);
+        assert.deepEqual((await rows("select replied_at from public.notifications where notification_id=$1", [first.notification_id]))[0], before);
+        await actor(b);
+        await rejected(() => db.query("select public.mark_notification_replied($1)", [first.notification_id]), "P0001");
+        await db.exec("reset role; set role anon");
+        await rejected(() => db.query("select public.mark_notification_replied($1)", [first.notification_id]), "42501");
+        await actor(a);
+        assert.deepEqual((await rows("select replied_at from public.notifications where notification_id=$1", [first.notification_id]))[0], before);
     });
     await test("other owner cannot read, mutate or log contact against this lead", async () => {
         await actor(b);
