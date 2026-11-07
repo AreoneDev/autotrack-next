@@ -2,7 +2,7 @@ import { Lead } from "@/domain/objects/Lead";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type LeadRow = {
+export type LeadRow = {
     lead_id: number;
     first_name: string | null;
     last_name: string | null;
@@ -39,7 +39,7 @@ function toDate(value: string | null, fallback = new Date()): Date {
     return new Date(value);
 }
 
-function mapRowToLead(row: LeadRow): Lead {
+export function mapRowToLead(row: LeadRow): Lead {
     return new Lead({
         leadID: row.lead_id,
         firstName: row.first_name ?? "",
