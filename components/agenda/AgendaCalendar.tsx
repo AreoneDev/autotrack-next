@@ -15,6 +15,13 @@ type Props = {
 
 export default function AgendaCalendar({ selectedDate, onSelectDate, unfinishedTaskCount, pastUnfinishedTaskCounts, todayDateString }: Props) {
     const region = useRef<HTMLElement>(null);
+    const pendingKeyboardFocus = useRef<string | null>(null);
+    useEffect(() => {
+        const date = pendingKeyboardFocus.current;
+        if (!date) return;
+        pendingKeyboardFocus.current = null;
+        region.current?.querySelector<HTMLButtonElement>(`[data-date="${date}"]`)?.focus();
+    }, [selectedDate]);
     function navigateMonth(month: Date) {
         const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
         onSelectDate(new Date(month.getFullYear(), month.getMonth(), Math.min(selectedDate.getDate(), lastDay)));
@@ -40,8 +47,8 @@ export default function AgendaCalendar({ selectedDate, onSelectDate, unfinishedT
                 if (!(event.key in offsets)) return;
                 const next = new Date(date);
                 next.setDate(next.getDate() + offsets[event.key]);
+                pendingKeyboardFocus.current = localDateInput(next);
                 onSelectDate(next);
-                requestAnimationFrame(() => region.current?.querySelector<HTMLButtonElement>(`[data-date="${localDateInput(next)}"]`)?.focus());
             }}
             labels={{ labelPrevious: () => "Previous month", labelNext: () => "Next month" }}
             components={{ DayButton: AgendaDay }}
