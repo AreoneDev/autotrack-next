@@ -1,0 +1,171 @@
+<style>
+#at-account-review { --at-blue:light-dark(#315eff,#8eaaff);--at-blue-bg:light-dark(#eff5ff,#1c2b49);--at-ink:light-dark(#101828,#f0f4fb);--at-sub:light-dark(#64748b,#a9b7ca);--at-line:light-dark(#e0e7f0,#354256);--at-white:light-dark(#fff,#182233);--at-bg:light-dark(#f8fafc,#111a28);--at-danger:light-dark(#bd3542,#ff9ba6);--at-good:light-dark(#187650,#88d5b2);font:14px/1.5 'Segoe UI',Arial,sans-serif;color:var(--at-ink); }
+#at-account-review *{box-sizing:border-box} #at-account-review [hidden]{display:none!important}
+#at-account-review .at-stage{min-height:960px;padding-top:8px}
+#at-account-review .at-shell{display:flex;min-height:700px;position:relative;background:var(--at-bg);border:1px solid var(--at-line);border-radius:10px;isolation:isolate}
+#at-account-review .at-side{width:232px;flex-shrink:0;background:var(--at-white);border-right:1px solid var(--at-line);display:flex;flex-direction:column;border-radius:10px 0 0 10px;position:relative;z-index:3}
+#at-account-review .at-brand{display:flex;align-items:center;gap:9px;padding:24px 16px 36px;min-height:104px}
+#at-account-review .at-brandmark{color:var(--at-blue);display:flex} #at-account-review .at-brandmark svg{width:32px;height:32px}
+#at-account-review strong{font-weight:600} #at-account-review .at-brand strong{font-size:20px;letter-spacing:-.5px}
+#at-account-review small{display:block;font-size:12px;color:var(--at-sub)}
+#at-account-review button{font:inherit;cursor:var(--cursor-interaction,pointer)}
+#at-account-review button:focus-visible,#at-account-review input:focus-visible{outline:2px solid var(--at-blue);outline-offset:3px}
+#at-account-review button:disabled{opacity:.48;cursor:default}
+#at-account-review button{border:0;color:inherit;background:transparent}
+#at-account-review .at-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:36px;min-height:36px;border-radius:8px}
+#at-account-review .at-icon:hover{background:var(--at-blue-bg);color:var(--at-blue)}
+#at-account-review .at-collapse{margin-left:auto;background:var(--at-bg)}
+#at-account-review svg{width:18px;height:18px;flex-shrink:0}
+#at-account-review .at-nav{display:flex;flex-direction:column;gap:10px;padding:8px 12px}
+#at-account-review .at-nav button{display:flex;align-items:center;gap:13px;text-align:left;padding:13px 16px;border-radius:8px;min-height:46px;color:var(--at-sub)}
+#at-account-review .at-nav button:hover,#at-account-review .at-nav button[aria-current=page]{background:var(--at-blue-bg);color:var(--at-blue)}
+#at-account-review .at-account-wrap{margin-top:auto;padding:18px 12px;border-top:1px solid var(--at-line);position:relative}
+#at-account-review .at-trigger{width:100%;display:flex;align-items:center;gap:10px;padding:9px 4px;border-radius:8px;text-align:left}
+#at-account-review .at-trigger:hover,#at-account-review .at-trigger[aria-expanded=true]{background:var(--at-blue-bg)}
+#at-account-review .at-avatar{width:40px;height:40px;border-radius:50%;background:var(--at-blue);color:light-dark(#fff,#101b32);display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0}
+#at-account-review .at-identity{min-width:0;flex:1} #at-account-review .at-identity strong{display:block;font-size:14px} #at-account-review .at-identity small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#at-account-review .at-popover{position:absolute;bottom:100%;left:12px;width:282px;max-width:calc(100vw - 42px);padding:8px;background:var(--at-white);border:1px solid var(--at-line);border-radius:10px;box-shadow:0 10px 35px #10182824;z-index:5}
+#at-account-review .at-pop-head{padding:10px 10px 13px;border-bottom:1px solid var(--at-line);margin-bottom:6px}
+#at-account-review .at-email{overflow-wrap:anywhere;color:var(--at-sub);font-size:12px;margin-top:3px}
+#at-account-review .at-menu-action{width:100%;display:flex;align-items:center;gap:10px;padding:11px 10px;text-align:left;border-radius:6px;min-height:44px}
+#at-account-review .at-menu-action:hover{background:var(--at-bg)} #at-account-review .at-menu-action.at-selected{background:var(--at-blue-bg);color:var(--at-blue)}
+#at-account-review .at-sep{height:1px;background:var(--at-line);margin:6px 2px}
+#at-account-review .at-danger{color:var(--at-danger)!important}
+#at-account-review .at-main{flex:1;min-width:0}
+#at-account-review .at-header{background:var(--at-white);border-bottom:1px solid var(--at-line);border-radius:0 10px 0 0;display:flex;align-items:center;justify-content:space-between;padding:17px 24px;gap:12px;min-height:84px}
+#at-account-review h2,#at-account-review h3,#at-account-review p{margin:0} #at-account-review h2{font-size:23px;line-height:1.3;letter-spacing:-.5px;font-weight:650} #at-account-review h3{font-size:16px;font-weight:600}
+#at-account-review .at-header p{color:var(--at-sub);font-size:12px;margin-top:4px}
+#at-account-review .at-header-meta{display:flex;align-items:center;gap:14px;color:var(--at-sub);font-size:12px;flex-shrink:0}
+#at-account-review .at-meta{display:flex;align-items:center;gap:7px}
+#at-account-review .at-content{padding:26px;min-width:0}
+#at-account-review .at-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#at-account-review .at-stat{background:var(--at-white);border:1px solid var(--at-line);border-radius:10px;padding:20px;box-shadow:0 1px 2px #1018280b}
+#at-account-review .at-stat .at-stat-icon{background:var(--at-blue-bg);color:var(--at-blue);width:39px;height:39px;display:flex;align-items:center;justify-content:center;border-radius:9px;margin-bottom:16px}
+#at-account-review .at-stat p{color:var(--at-sub);font-size:13px} #at-account-review .at-stat b{display:block;font-size:28px;line-height:1.3;margin:5px 0 4px}
+#at-account-review .at-panel{background:var(--at-white);border:1px solid var(--at-line);border-radius:10px;margin-bottom:18px;box-shadow:0 1px 2px #1018280b}
+#at-account-review .at-panel-head{padding:19px 22px;border-bottom:1px solid var(--at-line)}
+#at-account-review .at-panel-head p{font-size:13px;color:var(--at-sub);margin-top:4px}
+#at-account-review .at-panel-body{padding:20px 22px}
+#at-account-review .at-tasks{margin-top:20px;padding:22px;background:var(--at-white);border:1px solid var(--at-line);border-radius:10px}
+#at-account-review .at-empty{margin-top:16px;padding:16px;background:var(--at-bg);border-radius:8px;color:var(--at-sub);font-size:13px}
+#at-account-review .at-back{display:flex;align-items:center;gap:6px;color:var(--at-sub);margin-bottom:18px;padding:2px 0;min-height:30px;font-size:13px}
+#at-account-review .at-profile-row{display:flex;align-items:center;gap:12px;margin-bottom:18px} #at-account-review .at-profile-row .at-avatar{width:48px;height:48px}
+#at-account-review label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+#at-account-review input{width:100%;max-width:420px;border:1px solid var(--at-line);background:var(--at-white);color:var(--at-ink);border-radius:7px;min-height:42px;padding:9px 12px;font:inherit}
+#at-account-review .at-help{font-size:12px;color:var(--at-sub);margin-top:6px}
+#at-account-review .at-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:20px}
+#at-account-review .at-btn{padding:9px 15px;border:1px solid var(--at-line);border-radius:7px;background:var(--at-white);font-size:13px;min-height:40px;font-weight:500}
+#at-account-review .at-primary{background:var(--at-blue);border-color:var(--at-blue);color:light-dark(#fff,#101b32)}
+#at-account-review .at-status{font-size:12px;color:var(--at-good);margin-left:4px;overflow-wrap:anywhere}
+#at-account-review .at-error{font-size:12px;color:var(--at-danger);padding:8px 10px;overflow-wrap:anywhere}
+#at-account-review .at-data-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#at-account-review .at-data-row .at-email{font-size:14px;color:var(--at-ink);margin:4px 0 8px}
+#at-account-review .at-pill{font-size:11px;color:var(--at-sub);border:1px solid var(--at-line);border-radius:20px;padding:3px 8px;white-space:nowrap}
+#at-account-review .at-caption{font-size:12px;color:var(--at-sub);padding:12px 2px;display:flex;gap:16px;flex-wrap:wrap}
+#at-account-review .at-collapsed .at-side{width:80px} #at-account-review .at-collapsed .at-brand{flex-wrap:wrap;justify-content:center;padding:20px 12px;gap:14px}
+#at-account-review .at-collapsed .at-brand-label,#at-account-review .at-collapsed .at-nav span,#at-account-review .at-collapsed .at-trigger .at-identity,#at-account-review .at-collapsed .at-trigger>svg{display:none}
+#at-account-review .at-collapsed .at-collapse{margin:0} #at-account-review .at-collapsed .at-nav{padding:12px} #at-account-review .at-collapsed .at-nav button{padding:12px;justify-content:center}
+#at-account-review .at-collapsed .at-account-wrap{padding:18px 12px} #at-account-review .at-collapsed .at-trigger{justify-content:center;padding:4px} #at-account-review .at-collapsed .at-popover{left:calc(100% + 10px);bottom:12px}
+#at-account-review .at-mobile-stage{display:flex;flex-direction:column;align-items:center} #at-account-review .at-mobile-stage>.at-caption{width:390px;max-width:100%}
+#at-account-review .at-mobile{width:390px;max-width:100%;min-height:720px}
+#at-account-review .at-mobile .at-main{width:100%} #at-account-review .at-mobile .at-header{padding:16px;border-radius:10px 10px 0 0;min-height:76px;justify-content:flex-start}
+#at-account-review .at-mobile h2{font-size:21px} #at-account-review .at-mobile .at-header-meta{margin-left:auto}
+#at-account-review .at-mobile .at-meta,#at-account-review .at-mobile .at-header p{display:none}
+#at-account-review .at-hamburger{display:none} #at-account-review .at-mobile .at-hamburger{display:flex}
+#at-account-review .at-mobile .at-content{padding:18px 16px} #at-account-review .at-mobile .at-panel-head,#at-account-review .at-mobile .at-panel-body{padding:17px}
+#at-account-review .at-mobile .at-stats{gap:12px} #at-account-review .at-mobile .at-stat{padding:15px}
+#at-account-review .at-mobile .at-data-row{align-items:flex-start;flex-wrap:wrap;gap:10px}
+#at-account-review .at-mobile .at-side{display:none}
+#at-account-review .at-mobile.at-drawer .at-side{display:flex;position:absolute;inset:0 auto 0 0;width:min(288px,calc(100% - 48px));z-index:8;border-radius:10px 0 0 10px}
+#at-account-review .at-mobile .at-brand{padding:24px 16px 30px}
+#at-account-review .at-scrim{position:absolute;inset:0;background:#0f172a61;z-index:7;border-radius:10px}
+#at-account-review .at-mobile .at-account-wrap{padding:16px}
+#at-account-review .at-mobile .at-trigger{padding:4px 0;margin-bottom:12px} #at-account-review .at-mobile .at-trigger>svg{display:none}
+#at-account-review .at-mobile .at-identity small{white-space:normal;overflow-wrap:anywhere}
+#at-account-review .at-mobile .at-popover{position:static;width:auto;max-width:none;border:0;box-shadow:none;background:transparent;padding:0}
+#at-account-review .at-mobile .at-pop-head{display:none}
+#at-account-review .at-dialog-layer{position:absolute;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;padding:20px;background:#0f172a61;border-radius:10px}
+#at-account-review .at-dialog{width:370px;max-width:100%;background:var(--at-white);border-radius:12px;border:1px solid var(--at-line);padding:24px;box-shadow:0 12px 36px #10182833}
+#at-account-review .at-dialog p{color:var(--at-sub);font-size:13px;margin-top:8px}
+#at-account-review .at-signed-out{min-height:698px;width:100%;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center}
+#at-account-review .at-signed-out .at-avatar{margin:0 auto 16px} #at-account-review .at-signed-out p{margin:8px 0 20px;color:var(--at-sub)}
+@media(min-width:1100px){#at-account-review .at-side{width:260px}}
+@media(max-width:760px){#at-account-review .at-header-meta .at-meta{display:none} #at-account-review .at-header{padding:16px} #at-account-review .at-content{padding:18px} #at-account-review .at-side{width:200px} #at-account-review .at-brand strong{font-size:18px} #at-account-review .at-brand{padding:20px 12px 30px} #at-account-review .at-stats{grid-template-columns:1fr} #at-account-review .at-stat{padding:14px} #at-account-review .at-stat .at-stat-icon{display:none}}
+@media(max-width:580px){#at-account-review .at-shell:not(.at-mobile) .at-side{width:64px} #at-account-review .at-shell:not(.at-mobile) .at-brand{padding:18px 8px;flex-wrap:wrap;justify-content:center} #at-account-review .at-shell:not(.at-mobile) .at-brand-label,#at-account-review .at-shell:not(.at-mobile) .at-nav span,#at-account-review .at-shell:not(.at-mobile) .at-trigger .at-identity,#at-account-review .at-shell:not(.at-mobile) .at-trigger>svg{display:none} #at-account-review .at-shell:not(.at-mobile) .at-nav{padding:8px} #at-account-review .at-shell:not(.at-mobile) .at-nav button{padding:14px;justify-content:center} #at-account-review .at-shell:not(.at-mobile) .at-collapse{margin:0} #at-account-review .at-shell:not(.at-mobile) .at-account-wrap{padding:14px 8px} #at-account-review .at-shell:not(.at-mobile) .at-popover{left:4px;bottom:calc(100% + 6px);width:260px;max-width:calc(100vw - 32px)} #at-account-review .at-content{padding:12px} #at-account-review .at-panel-head,#at-account-review .at-panel-body{padding:14px} #at-account-review .at-data-row{flex-wrap:wrap} #at-account-review .at-stage{min-height:900px} #at-account-review .at-mobile .at-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<div id="at-account-review">
+  <div class="viz-carousel" aria-label="账号与 Settings 设计状态" data-previous-label="上一视图" data-next-label="下一视图">
+    <section class="at-stage" data-variant="桌面展开" aria-label="桌面展开侧边栏与账号菜单"><div data-preview="expanded"></div></section>
+    <section class="at-stage" data-variant="桌面折叠" aria-label="桌面折叠侧边栏与账号菜单" hidden><div data-preview="collapsed"></div></section>
+    <section class="at-stage" data-variant="Settings 页面" aria-label="账户设置页面" hidden><div data-preview="settings"></div></section>
+    <section class="at-stage" data-variant="移动端" aria-label="移动端抽屉与账户设置" hidden><div class="at-mobile-stage" data-preview="mobile"></div></section>
+  </div>
+</div>
+<script>
+(()=>{
+const root=document.getElementById('at-account-review');
+const email='pengyuwang777@gmail.com';
+const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
+const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const options={outcome:'成功',identity:'示例姓名'};
+const previews=[];
+const remembered=window.openai?.widgetState?.privateContent;
+root.querySelectorAll('[data-preview]').forEach((host,index)=>{
+ const mode=host.dataset.preview;
+ const s={page:mode==='settings'?'settings':'dashboard',collapsed:mode==='collapsed',menu:mode!=='settings',drawer:mode==='mobile',name:'Pengyu Wang',draft:'Pengyu Wang',busy:false,status:'',error:'',confirm:null,returnFocus:null,signedOut:false};
+ const saved=remembered?.[mode];
+ if(saved&&['dashboard','settings'].includes(saved.page)){s.page=saved.page;s.collapsed=!!saved.collapsed;s.drawer=!!saved.drawer;s.menu=!!saved.menu;}
+ const isMobile=mode==='mobile';
+ const dirty=()=>s.name!==s.draft;
+ const label=()=>options.identity==='通用账号名'?'AutoTrack account':s.name;
+ const initials=()=>options.identity==='通用账号名'?'P':s.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+ const avatar=()=>`<span class="at-avatar">${escape(initials())}</span>`;
+ function persist(){if(!window.openai?.setWidgetState)return;const snapshot={};previews.forEach(p=>{snapshot[p.mode]={page:p.s.page,collapsed:p.s.collapsed,drawer:p.s.drawer,menu:p.s.menu};});window.openai.setWidgetState({modelContent:{design:'account-settings',view:mode,page:s.page},privateContent:snapshot}).catch(()=>{});}
+ function menu(){return `<div class="at-popover" id="at-menu-${index}" aria-label="Account actions" ${!isMobile&&!s.menu?'hidden':''}><div class="at-pop-head"><strong>${escape(label())}</strong><div class="at-email">${email}</div></div><button type="button" data-action="settings" class="at-menu-action ${s.page==='settings'?'at-selected':''}" ${s.page==='settings'?'aria-current="page"':''}>${icon('settings')}<span>Settings</span></button><div class="at-sep"></div><button type="button" data-action="signout" class="at-menu-action at-danger" ${s.busy?'disabled':''}>${icon('log-out')}<span>${s.busy?'Signing out…':'Sign out'}</span></button>${s.error&&s.error.startsWith('Sign out')?`<p role="alert" class="at-error">${escape(s.error)}</p>`:''}</div>`;}
+ function settings(){return `<button type="button" class="at-back" data-action="dashboard">${icon('arrow-left')} Back to Dashboard</button><section class="at-panel" aria-label="Profile"><div class="at-panel-head"><h3>Profile</h3><p>Your name as it appears in AutoTrack.</p></div><div class="at-panel-body"><div class="at-profile-row">${avatar()}<div><strong>${escape(label())}</strong><small>Initials from your display name</small></div></div><form id="at-form-${index}" novalidate><label for="at-name-${index}">Display name</label><input id="at-name-${index}" name="display-name" value="${escape(s.draft)}" autocomplete="off" maxlength="80" aria-describedby="at-name-help-${index}" ${s.busy?'disabled':''}><p id="at-name-help-${index}" class="at-help">1–60 characters. Visible only in your account.</p>${s.error&&!s.error.startsWith('Sign out')?`<p role="alert" class="at-error">${escape(s.error)}</p>`:''}<div class="at-actions"><button type="submit" class="at-btn at-primary" data-action="save" ${!dirty()||s.busy?'disabled':''}>${s.busy?'Saving…':'Save changes'}</button><button type="button" class="at-btn" data-action="cancel" ${!dirty()||s.busy?'disabled':''}>Cancel</button><span role="status" class="at-status">${escape(s.status)}</span></div></form></div></section><section class="at-panel" aria-label="Sign-in"><div class="at-panel-head"><h3>Sign-in</h3><p>The email address you use to access AutoTrack.</p></div><div class="at-panel-body"><small>Email address</small><div class="at-email" style="font-size:14px;color:var(--at-ink)">${email}</div><p class="at-help">Use a password or an email link on the sign-in page.</p></div></section><section class="at-panel" aria-label="Session"><div class="at-panel-body at-data-row"><div><h3>Current session</h3><p class="at-help">Sign out on this device.</p></div><button type="button" class="at-btn at-danger" data-action="signout" ${s.busy?'disabled':''}>${s.busy?'Signing out…':'Sign out'}</button></div>${s.error.startsWith('Sign out')?`<p role="alert" class="at-error">${escape(s.error)}</p>`:''}</section>`;}
+ function dashboard(){return `<div class="at-stats">${[['calendar-check',"Today’s Tasks",'0','Scheduled work due today'],['triangle-alert','High Priority Leads','0','Need immediate attention today'],['message-square','Unreplied Messages','0','Customer replies waiting for response'],['clock','Overdue Follow-ups','661','Missed or past-due scheduled actions']].map(([i,l,n,h])=>`<section class="at-stat"><span class="at-stat-icon">${icon(i)}</span><p>${l}</p><b>${n}</b><small>${h}</small></section>`).join('')}</div><section class="at-tasks"><h3>Today’s Tasks</h3><p class="at-help">Planned work for today only.</p><div class="at-empty">No tasks scheduled for today.</div></section>`;}
+ function render(){
+ if(s.signedOut){host.innerHTML=`<div class="at-shell ${isMobile?'at-mobile':''}"><div class="at-signed-out"><div><div class="at-avatar">${icon('check')}</div><h2>Signed out</h2><p>登录页面 · 仅演示状态</p><button type="button" class="at-btn at-primary" data-action="restart">Back to preview</button></div></div></div>`;bind();icons();return;}
+ host.innerHTML=`<div class="at-shell ${s.collapsed&&!isMobile?'at-collapsed':''} ${isMobile?'at-mobile':''} ${isMobile&&s.drawer?'at-drawer':''}" aria-label="AutoTrack ${mode} preview"><aside class="at-side" ${isMobile&&!s.drawer?'hidden':''}><div class="at-brand"><span class="at-brandmark">${icon('car-front')}</span><div class="at-brand-label"><strong>AutoTrack</strong><small>CRM</small></div><button type="button" class="at-icon at-collapse" data-action="collapse" aria-label="${isMobile?'Close navigation':s.collapsed?'Expand sidebar':'Collapse sidebar'}">${icon(isMobile?'x':s.collapsed?'chevron-right':'chevron-left')}</button></div><nav class="at-nav" aria-label="Primary navigation">${[['layout-dashboard','Dashboard','dashboard'],['users','Leads','leads'],['calendar-days','Agenda','agenda'],['chart-no-axes-column','Analytics','analytics']].map(([i,l,p])=>`<button type="button" data-action="${p==='dashboard'?'dashboard':'business'}" aria-label="${l}" ${s.page===p?'aria-current="page"':''}>${icon(i)}<span>${l}</span></button>`).join('')}</nav><div class="at-account-wrap">${menu()}${isMobile?`<div class="at-trigger">${avatar()}<div class="at-identity"><strong>${escape(label())}</strong><small>${email}</small></div></div>`:`<button type="button" class="at-trigger" data-action="account" aria-label="Account, ${email}" aria-expanded="${s.menu}" aria-controls="at-menu-${index}">${avatar()}<span class="at-identity"><strong>${escape(label())}</strong><small>${email}</small></span>${icon('chevrons-up-down')}</button>`}</div></aside>${isMobile&&s.drawer?'<button type="button" class="at-scrim" data-action="drawer-close" aria-label="Close navigation"></button>':''}<div class="at-main"><header class="at-header"><button type="button" class="at-icon at-hamburger" data-action="drawer-open" aria-label="Open navigation" aria-expanded="${s.drawer}">${icon('menu')}</button><div><h2>${s.page==='settings'?'Settings':'Dashboard'}</h2><p>${s.page==='settings'?'Manage your personal AutoTrack account.':"Overview of today’s priorities and follow-up actions."}</p></div><div class="at-header-meta"><span class="at-icon" aria-label="Notifications">${icon('bell')}</span><span class="at-meta">${icon('calendar-days')} Nov 7, 2026</span><span class="at-meta">${icon('clock')} 09:44 a.m.</span></div></header><div class="at-content">${s.page==='settings'?settings():dashboard()}</div></div>${s.confirm?`<div class="at-dialog-layer"><div class="at-dialog" role="dialog" aria-modal="true" aria-labelledby="at-dialog-title-${index}"><h3 id="at-dialog-title-${index}">Discard unsaved changes?</h3><p>Your display name hasn’t been saved.</p><div class="at-actions"><button type="button" class="at-btn at-primary" data-action="stay">Stay</button><button type="button" class="at-btn" data-action="discard">Discard changes</button></div></div></div>`:''}</div><div class="at-caption"><span>${isMobile?'移动端：抽屉内直接显示账号操作':s.page==='settings'?'Settings：Profile / Sign-in / Session':'底部头像 → 账号菜单 → Settings / Sign out'}</span><span>交互预览 · 姓名为示例</span></div>`;
+ if(isMobile){const wrap=host.querySelector('.at-account-wrap');const trigger=wrap?.querySelector('.at-trigger');if(wrap&&trigger)wrap.prepend(trigger);}
+ bind();icons();
+ }
+ function icons(){if(globalThis.lucide)lucide.createIcons({attrs:{width:18,height:18}});}
+ function leave(action,button){if(s.busy)return;if(dirty()){s.confirm=action;s.returnFocus=button?.dataset.action||'dashboard';render();host.querySelector('[data-action="stay"]').focus();return;}act(action);}
+ function act(action){if(action==='signout'){signout();return;}s.page=action==='settings'?'settings':'dashboard';s.menu=false;s.drawer=false;s.status='';s.error='';render();persist();}
+ function updateButtons(){host.querySelectorAll('[data-action="save"],[data-action="cancel"]').forEach(b=>b.disabled=!dirty()||s.busy);const status=host.querySelector('.at-status');if(status)status.textContent='';}
+ async function signout(){s.busy=true;s.error='';render();await new Promise(r=>setTimeout(r,650));s.busy=false;if(options.outcome==='失败'){s.error='Sign out failed. Please try again.';s.menu=true;}else{s.signedOut=true;s.menu=false;s.drawer=false;}render();}
+ async function save(){if(s.busy||!dirty())return;const value=s.draft.trim();if(!value||value.length>60){s.error='Enter a display name between 1 and 60 characters.';s.status='';render();host.querySelector('input').focus();return;}s.busy=true;s.error='';s.status='';render();await new Promise(r=>setTimeout(r,650));s.busy=false;if(options.outcome==='失败'){s.error='Couldn’t save your name. Please try again.';}else{s.name=value;s.draft=value;s.status='Saved';}render();}
+ function bind(){
+ host.querySelector('form')?.addEventListener('submit',e=>{e.preventDefault();save();});
+ host.querySelector('input')?.addEventListener('input',e=>{s.draft=e.target.value;s.status='';updateButtons();});
+ host.querySelector('input')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}});
+ host.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',event=>{
+ const a=button.dataset.action;
+ if(a==='save'){event.preventDefault();save();return;}
+ if(a==='settings'||a==='dashboard'||a==='signout'){leave(a,button);return;}
+ if(a==='account'){s.menu=!s.menu;render();if(s.menu)host.querySelector('.at-popover button')?.focus();else host.querySelector('[data-action="account"]')?.focus();persist();}
+ if(a==='collapse'){if(isMobile){s.drawer=false;}else{s.collapsed=!s.collapsed;s.menu=false;}render();host.querySelector('[data-action="collapse"]')?.focus();persist();}
+ if(a==='drawer-open'){s.drawer=true;render();host.querySelector('[data-action="collapse"]')?.focus();persist();}
+ if(a==='drawer-close'){s.drawer=false;render();host.querySelector('[data-action="drawer-open"]')?.focus();persist();}
+ if(a==='cancel'){s.draft=s.name;s.error='';s.status='';render();host.querySelector('input')?.focus();}
+ if(a==='stay'){const returnAction=s.returnFocus;s.confirm=null;render();host.querySelector(`[data-action="${returnAction}"]`)?.focus();}
+ if(a==='discard'){const next=s.confirm;s.confirm=null;s.draft=s.name;act(next);}
+ if(a==='restart'){s.signedOut=false;s.page='dashboard';s.drawer=isMobile;s.menu=!isMobile;s.draft=s.name;render();}
+ if(a==='business'){const caption=host.querySelector('.at-caption');if(caption)caption.firstElementChild.textContent='本稿仅预览账号入口与 Settings；业务页面保持现有设计。';}
+ }));
+ }
+ host.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){if(s.confirm){s.confirm=null;render();host.querySelector('input')?.focus();}else if(s.menu&&!isMobile){s.menu=false;render();host.querySelector('[data-action="account"]')?.focus();}else if(isMobile&&s.drawer){s.drawer=false;render();host.querySelector('[data-action="drawer-open"]')?.focus();}}
+ if(e.key==='Tab'){
+ const scope=host.querySelector('.at-dialog')||(isMobile&&s.drawer?host.querySelector('.at-side'):null);
+ if(scope){const items=Array.from(scope.querySelectorAll('button:not(:disabled),input:not(:disabled)'));const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
+ }
+ });
+ host.addEventListener('click',e=>{if(s.menu&&!isMobile&&!e.target.closest('.at-account-wrap')){s.menu=false;render();}});
+ previews.push({mode,s,render});render();
+});
+if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:()=>previews.forEach(p=>p.render())});tweak.addSelect(options,'outcome',{label:'模拟保存 / 退出结果',options:['成功','失败']});tweak.addSelect(options,'identity',{label:'账号名称',options:['示例姓名','通用账号名']});}
+window.addEventListener('openai:set_globals',e=>{const snapshot=e.detail?.globals?.widgetState?.privateContent;if(!snapshot)return;previews.forEach(p=>{const value=snapshot[p.mode];if(!value||!['dashboard','settings'].includes(value.page)||p.s.busy||p.s.confirm)return;p.s.page=value.page;p.s.menu=!!value.menu;p.s.drawer=!!value.drawer;p.s.collapsed=!!value.collapsed;p.render();});});
+})();
+</script>
