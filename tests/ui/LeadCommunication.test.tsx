@@ -2,6 +2,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import LeadDetailPanel, { type LeadDetailViewModel } from "@/components/leads/LeadDetailPanel";
 import { CommunicationRepo, type CommunicationOperation } from "@/lib/persistence/real/supabase/CommunicationRepo";
+import { ContactHistoryRepo } from "@/lib/persistence/real/supabase/ContactHistoryRepo";
 import { Notification } from "@/domain/objects/Notification";
 import { makeLead } from "@/tests/fixtures/domain";
 import { localDateInput } from "@/lib/date";
@@ -10,9 +11,12 @@ const mockRefresh = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }));
 jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 jest.mock("@/lib/persistence/real/supabase/CommunicationRepo");
+jest.mock("@/lib/persistence/real/supabase/ContactHistoryRepo");
 jest.mock("@/components/leads/VehicleInterestSelector", () => function VehicleSelector() { return null; });
 
 const log = jest.fn();
+const getPage = jest.fn();
+let historyRecords: Array<{ notificationID: number; leadID: number; title: string; occurredAt: string; details: null }> = [];
 const operationId = "12345678-1234-4234-8234-123456789abc";
 function viewModel(): LeadDetailViewModel {
     const lead = makeLead({ leadID: 1, firstName: "Ada", lastName: "Chen", stage: "CONTACTED", notes: "", lastInteractionDate: null });
@@ -31,10 +35,18 @@ function result(operation: CommunicationOperation) {
 }
 beforeEach(() => {
     sessionStorage.clear();
-    log.mockReset().mockImplementation(async (operation) => result(operation));
+    historyRecords = [];
+    getPage.mockReset().mockImplementation(async () => ({ records: historyRecords, hasMore: false }));
+    log.mockReset().mockImplementation(async (operation) => {
+        const saved = result(operation);
+        historyRecords = [{ notificationID: saved.notification.getEventID(), leadID: operation.leadId,
+            title: saved.notification.getTitle(), occurredAt: operation.occurredAt, details: null }];
+        return saved;
+    });
     mockRefresh.mockReset();
     Object.defineProperty(crypto, "randomUUID", { configurable: true, value: () => operationId });
     jest.mocked(CommunicationRepo).mockImplementation(() => ({ logCommunication: log }) as unknown as CommunicationRepo);
+    jest.mocked(ContactHistoryRepo).mockImplementation(() => ({ getPage }) as unknown as ContactHistoryRepo);
 });
 
 it.each(["Call", "Email", "Message"])("logs %s through the synchronized path and displays confirmed contact time", async (label) => {
