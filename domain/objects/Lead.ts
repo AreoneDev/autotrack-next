@@ -1,4 +1,5 @@
 import { Vehicle } from "./Vehicle";
+import { getLeadOutcome } from "./LeadOutcome";
 
 export class Lead {
 
@@ -157,11 +158,11 @@ export class Lead {
     }
 
     isActive(): boolean {
-        return this.status;
+        return getLeadOutcome(this) === "ACTIVE";
     }
 
     isClosed(): boolean {
-        return !this.status;
+        return !this.isActive();
     }
 
     updateScore(score: number): void {

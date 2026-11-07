@@ -126,4 +126,43 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         expect(screen.getAllByRole("row")).toHaveLength(4);
         expect(remove).toHaveBeenLastCalledWith(1);
     });
+
+    it.each([
+        ["Active", "Open Chen"], ["Lost", "Lost Chen"],
+        ["Delivered", "Won Chen"], ["Closed (outcome unconfirmed)", "Unconfirmed Chen"],
+    ])("outcome filter %s uses stage precedence over the legacy status flag", async (filter, name) => {
+        render(<LeadTable leads={[
+            makeLead({ firstName: "Open" }),
+            makeLead({ leadID: 2, firstName: "Lost", status: false }),
+            makeLead({ leadID: 3, firstName: "Won", stage: " delivered ", status: false }),
+            makeLead({ leadID: 4, firstName: "Unconfirmed", stage: " closed ", status: true }),
+        ]} />);
+        const user = userEvent.setup();
+        expect(screen.getByRole("combobox", { name: "Status for Won Chen" })).toBeDisabled();
+        expect(screen.getByRole("combobox", { name: "Status for Unconfirmed Chen" })).toBeDisabled();
+        await user.click(screen.getByRole("combobox", { name: "Filter by status" }));
+        await user.click(await screen.findByRole("option", { name: filter }));
+        expect(screen.getAllByRole("row")).toHaveLength(2);
+        expect(screen.getByRole("link", { name })).toBeInTheDocument();
+    });
+
+    it("closed stage filtering recognizes legacy whitespace and case", async () => {
+        render(<LeadTable leads={[makeLead({ stage: " closed " }), makeLead({ leadID: 2, firstName: "Other" })]} />);
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("combobox", { name: "Filter by stage" }));
+        await user.click(await screen.findByRole("option", { name: "Closed" }));
+        expect(screen.getAllByRole("row")).toHaveLength(2);
+        expect(screen.getByRole("link", { name: "Ada Chen" })).toBeInTheDocument();
+    });
+
+    it.each(["Delivered", "Closed (outcome unconfirmed)"])("creating a %s lead saves an inactive consistent state", async (stage) => {
+        render(<LeadTable leads={[]} />);
+        const user = userEvent.setup();
+        fireEvent.click(screen.getByRole("button", { name: "Create new lead" }));
+        await user.type(screen.getByLabelText("First Name"), "Terminal");
+        await user.click(screen.getByRole("combobox", { name: "Stage" }));
+        await user.click(await screen.findByRole("option", { name: stage }));
+        await user.click(screen.getByRole("button", { name: "Create Lead" }));
+        expect(insert).toHaveBeenCalledWith(expect.objectContaining({ status: false, stage: stage === "Delivered" ? "DELIVERED" : "CLOSED" }));
+    });
 });

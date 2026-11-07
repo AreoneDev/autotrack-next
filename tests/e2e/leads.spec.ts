@@ -1,5 +1,6 @@
 import { backendURL } from "./fixtures/endpoints";
 import { test, expect } from "@playwright/test";
+import { failNext, lead, login, reset, state, task } from "./fixtures/journeys";
 
 test("E2E-LEAD-01: create → search → change status → reload → delete", async ({ page, request }) => {
     expect((await request.post(`${backendURL}/__test__/reset`)).ok()).toBe(true);
@@ -32,4 +33,37 @@ test("E2E-LEAD-01: create → search → change status → reload → delete", a
     await page.reload();
     await expect(customer).toHaveCount(0);
     await expect(page.getByText("No leads match the selected filters.")).toBeVisible();
+});
+
+
+test("E2E-LEAD-02: dependent customer deletion keeps data on error and removes only its graph on retry", async ({ page, request }) => {
+    await reset(request, {
+        leads: [lead(), lead({ lead_id: 2, first_name: "Keep" })],
+        tasks: [task(1, "Delete task"), { ...task(2, "Keep task"), lead_id: 2 }],
+        notifications: [{ notification_id: 1, lead_id: 1, title: "Delete notification" }, { notification_id: 2, lead_id: null, title: "Keep standalone" }],
+        vehicles: [{ vehicle_id: 1, make: "Synthetic", model: "Shared", year: 2026 }],
+        lead_vehicle_interests: [{ lead_id: 1, vehicle_id: 1 }, { lead_id: 2, vehicle_id: 1 }],
+        lead_trade_in_vehicles: [{ lead_id: 1, vehicle_id: 1 }],
+    });
+    await login(page);
+    await page.goto("/leads");
+    const before = await state(request);
+    const customer = page.getByRole("link", { name: "Journey Customer", exact: true });
+    const remove = page.getByRole("row").filter({ has: customer }).getByRole("button", { name: "Delete Lead" });
+    await failNext(request, "leads", "DELETE");
+    await remove.click();
+    await expect(page.getByRole("alert").filter({ hasText: "Synthetic write failure" })).toBeVisible();
+    await expect(customer).toBeVisible();
+    await expect(remove).toBeEnabled();
+    expect(await state(request)).toEqual(before);
+    await remove.click();
+    await expect(customer).toHaveCount(0);
+    const after = await state(request);
+    for (const table of ["leads", "tasks", "notifications", "lead_vehicle_interests", "lead_trade_in_vehicles"]) {
+        expect(after[table]).toEqual(before[table].filter((row: { lead_id?: number }) => row.lead_id !== 1));
+    }
+    expect(after.vehicles).toEqual(before.vehicles);
+    await page.reload();
+    await expect(customer).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Keep Customer", exact: true })).toBeVisible();
 });

@@ -22,7 +22,8 @@
     "test:recovery": "node tests/recovery/run.mjs",
     "test:dependencies": "node tests/nonfunctional/dependency-audit.mjs",
     "test:a11y": "playwright test accessibility.spec.ts",
-    "test:supabase": "node tests/supabase/run.mjs"
+    "test:supabase": "node tests/supabase/run.mjs",
+    "test:data-recovery": "node tests/data-recovery/run.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@electric-sql/pglite": "^0.5.15",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",

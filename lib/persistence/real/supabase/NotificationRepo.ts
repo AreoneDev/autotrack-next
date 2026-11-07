@@ -3,8 +3,9 @@ import { Lead } from "@/domain/objects/Lead";
 import { Notification } from "@/domain/objects/Notification";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { contactDetailsFromRow, type ContactRow } from "./ContactHistoryRepo";
 
-type NotificationRow = {
+type NotificationRow = Partial<Omit<ContactRow, "lead_id">> & {
     notification_id: number;
     lead_id: number | null;
     title: string | null;
@@ -33,7 +34,8 @@ function mapRowToNotification(row: NotificationRow): Notification {
         createLeadReference(row.lead_id),
         row.title ?? "",
         row.date ? new Date(row.date) : new Date(),
-        row.notification_id
+        row.notification_id,
+        contactDetailsFromRow(row)
     );
 }
 

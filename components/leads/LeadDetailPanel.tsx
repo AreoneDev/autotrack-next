@@ -13,7 +13,6 @@ import { localDateInput } from "@/lib/date";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Bell,
     CalendarClock,
     Car,
     Check,
@@ -39,6 +38,7 @@ import {
 import { DuplicateLeadError, validateLeadContact, type LeadFieldErrors, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
 import DuplicateLeadNotice from "./DuplicateLeadNotice";
 import { Lead } from "@/domain/objects/Lead";
+import { getLeadOutcome, isTerminalLeadStage, leadOutcomeLabels, leadStateAfterStageChange, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
 import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 import { Vehicle } from "@/domain/objects/Vehicle";
@@ -46,6 +46,7 @@ import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
 import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
 import VehicleInterestSelector from "@/components/leads/VehicleInterestSelector";
+import ContactHistoryPanel from "@/components/leads/ContactHistoryPanel";
 
 export interface LeadDetailTaskViewModel {
     taskID: number;
@@ -112,8 +113,10 @@ const stageOptions = [
     "NEW",
     "CONTACTED",
     "VISITED",
+    "APPOINTMENT",
     "TEST_DRIVE",
     "NEGOTIATION",
+    "DELIVERED",
     "CLOSED",
 ];
 
@@ -380,6 +383,22 @@ export default function LeadDetailPanel({
         setLeadTasks(sortTasksByNewest(refreshedTasks.map(toTaskViewModel)));
     }
 
+    async function refreshAfterContact() {
+        await reloadLeadTasks();
+        const refreshed = await new LeadRepo().getLeadById(currentLead.leadID);
+        if (!refreshed) throw new Error("Could not reload the lead summary.");
+        const priority = scoringService.calculatePriority(refreshed);
+        const summary = {
+            lastInteractionDate: refreshed.lastInteractionDate ? toTaskDateInputValue(refreshed.lastInteractionDate) : "",
+            lastInteractionBy: refreshed.lastInteractionBy,
+            followUpDate: toTaskDateInputValue(refreshed.followUpDate),
+            score: priority.score, priorityLevel: priority.level, priorityReasons: priority.reasons,
+        };
+        setCurrentLead(previous => ({ ...previous, ...summary }));
+        setDraftLead(previous => ({ ...previous, ...summary }));
+        router.refresh();
+    }
+
     const fullName = useMemo(
         () => `${currentLead.firstName} ${currentLead.lastName}`.trim(),
         [currentLead.firstName, currentLead.lastName]
@@ -414,10 +433,7 @@ export default function LeadDetailPanel({
             const normalizedDraftLead = {
                 ...draftLead,
                 ...validation.values,
-                status:
-                    draftLead.stage.toUpperCase() === "CLOSED"
-                        ? false
-                        : draftLead.status,
+                ...leadStateForWrite(draftLead),
             };
             const leadToSave = createLeadFromViewModel(normalizedDraftLead);
             const priority = scoringService.calculatePriority(leadToSave);
@@ -898,7 +914,7 @@ export default function LeadDetailPanel({
                     <div className="rounded-lg bg-slate-50 p-4">
                         <p className="text-sm font-medium text-slate-500">Stage</p>
                         <p className="mt-2 text-xl font-bold text-slate-950">
-                            {currentLead.stage}
+                            {normalizeLeadStage(currentLead.stage)}
                         </p>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-4">
@@ -924,20 +940,24 @@ export default function LeadDetailPanel({
                                           : "bg-slate-100 text-slate-600"
                             }`}
                         >
-                            {currentLead.priorityLevel}
+                            {currentLead.priorityLevel === "CLOSED" ? "Inactive" : currentLead.priorityLevel}
                         </p>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-4">
                         <p className="text-sm font-medium text-slate-500">Status</p>
                         <p
                             className={`mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${
-                                currentLead.status
+                                getLeadOutcome(currentLead) === "ACTIVE"
                                     ? "bg-green-50 text-green-700"
-                                    : "bg-red-50 text-red-700"
+                                    : getLeadOutcome(currentLead) === "LOST"
+                                      ? "bg-red-50 text-red-700"
+                                      : getLeadOutcome(currentLead) === "DELIVERED"
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "bg-slate-100 text-slate-600"
                             }`}
                         >
                             <Check size={14} />
-                            {currentLead.status ? "Active" : "Lost"}
+                            {leadOutcomeLabels[getLeadOutcome(currentLead)]}
                         </p>
                     </div>
                 </div>
@@ -1013,10 +1033,11 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Stage
                             <SelectField
-                                value={draftLead.stage}
-                                onValueChange={(event) =>
-                                    updateDraft("stage", event)
-                                }
+                                value={normalizeLeadStage(draftLead.stage)}
+                                onValueChange={(stage) => setDraftLead((previous) => ({
+                                    ...previous,
+                                    ...leadStateAfterStageChange(previous, stage),
+                                }))}
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             >
                                 {stageOptions.map((stage) => (
@@ -1029,7 +1050,10 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Status
                             <SelectField
-                                value={draftLead.status ? "ACTIVE" : "LOST"}
+                                aria-label="Status"
+                                value={getLeadOutcome(draftLead)}
+                                disabled={isTerminalLeadStage(draftLead.stage)}
+                                aria-describedby="lead-outcome-help"
                                 onValueChange={(event) =>
                                     updateDraft(
                                         "status",
@@ -1040,7 +1064,14 @@ export default function LeadDetailPanel({
                             >
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="LOST">Lost</SelectItem>
+                                {isTerminalLeadStage(draftLead.stage) && (
+                                    <SelectItem value={getLeadOutcome(draftLead)}>{leadOutcomeLabels[getLeadOutcome(draftLead)]}</SelectItem>
+                                )}
                             </SelectField>
+                            <span id="lead-outcome-help" className="mt-2 block text-xs text-slate-500">
+                                DELIVERED records a sale. CLOSED leaves the outcome unconfirmed.
+                                Choose an open stage to reopen this lead, then select Active or Lost.
+                            </span>
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Budget
@@ -1577,38 +1608,7 @@ export default function LeadDetailPanel({
                         </div>
                     </section>
 
-                    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-bold text-slate-950">
-                            Notifications
-                        </h3>
-
-                        <div className="mt-5 space-y-3">
-                            {leadNotifications.map((notification) => (
-                                <div
-                                    key={notification.notificationID}
-                                    className="flex gap-3 rounded-lg border border-slate-200 p-4"
-                                >
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                                        <Bell size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-slate-950">
-                                            {notification.title}
-                                        </p>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            {formatDisplayDate(notification.date)}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {leadNotifications.length === 0 ? (
-                                <p className="text-sm text-slate-500">
-                                    No notifications for this lead.
-                                </p>
-                            ) : null}
-                        </div>
-                    </section>
+                    <ContactHistoryPanel leadID={currentLead.leadID} reloadKey={leadNotifications.length} onSaved={refreshAfterContact} />
                 </>
             ) : null}
 
