@@ -136,6 +136,7 @@ test("A11Y-03: modal initial focus, both Tab boundaries, Escape and focus restor
     const brief = page.getByRole("button", { name: "View lead brief for A11y Customer" });
     await brief.focus(); await page.keyboard.press("Enter");
     await expect(page.getByRole("button", { name: "Close lead brief" })).toBeFocused();
+    await expect(page.getByRole("dialog", { name: "Lead Brief", exact: true })).toHaveCSS("opacity", "1");
     await scan(page, info, "brief-dialog");
     await page.keyboard.press("Escape");
     await expect(brief).toBeFocused();
