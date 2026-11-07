@@ -13,7 +13,11 @@ export function scriptedClient(replies: Reply[]) {
         queries.push(query);
         return query;
     });
-    return { client: { from } as unknown as SupabaseClient, from, queries, remaining: () => pending.length };
+    const rpc = jest.fn((name: string, args?: Record<string, unknown>) => {
+        if (!args) throw new Error(`Missing arguments for ${name}`);
+        return from(`rpc:${name}`);
+    });
+    return { client: { from, rpc } as unknown as SupabaseClient, from, rpc, queries, remaining: () => pending.length };
 }
 
 function makeQuery(reply: Reply) {

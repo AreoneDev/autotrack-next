@@ -101,6 +101,43 @@ const server = createServer(async (request, response) => {
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
         if (url.pathname === "/auth/v1/otp" && request.method === "POST") return send(200, {});
         if (url.pathname === "/auth/v1/logout" && request.method === "POST") return send(200, {});
+        // Browser contract double only. Database trigger/RLS/concurrency semantics
+        // are exercised against PostgreSQL by tests/lead-validation/postgres.mjs.
+        if (url.pathname === "/rest/v1/rpc/save_lead_validated" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const draft = body.p_lead;
+            const previous = draft.lead_id ? tables.leads.find(row => row.lead_id === draft.lead_id) : null;
+            if (draft.lead_id && !previous) return send(400, { message: "Lead not found." });
+            const method = previous ? "PATCH" : "POST";
+            if (failure?.table === "leads" && failure.method === method) {
+                failure = null;
+                return send(503, { message: "Synthetic write failure" });
+            }
+            const emailKey = value => (value ?? "").trim().toLowerCase();
+            const phoneKey = value => {
+                let key = (value ?? "").replace(/[\s().-]/g, "");
+                if (/^00/.test(key)) key = "+" + key.slice(2);
+                if (/^\d{10}$/.test(key)) key = "+1" + key;
+                else if (/^1\d{10}$/.test(key)) key = "+" + key;
+                return key;
+            };
+            const emailChanged = !previous || emailKey(previous.lead_email) !== emailKey(draft.lead_email);
+            const phoneChanged = !previous || phoneKey(previous.phone) !== phoneKey(draft.phone);
+            const matches = tables.leads.filter(row => row !== previous).map(row => ({
+                leadID: row.lead_id, name: [row.first_name, row.last_name].filter(Boolean).join(" "),
+                email: Boolean(emailChanged && emailKey(draft.lead_email) && emailKey(row.lead_email) === emailKey(draft.lead_email)),
+                phone: Boolean(phoneChanged && phoneKey(draft.phone) && phoneKey(row.phone) === phoneKey(draft.phone)),
+            })).filter(row => row.email || row.phone);
+            if (matches.some(row => !(body.p_duplicate_ids ?? []).includes(row.leadID))) {
+                return send(400, { code: "P0001", message: "AUTOTRACK_DUPLICATE_LEAD", details: JSON.stringify(matches) });
+            }
+            const saved = { ...draft, lead_id: draft.lead_id ?? nextId++ };
+            if (!previous || draft.lead_email !== previous.lead_email) saved.lead_email = emailKey(saved.lead_email);
+            if (!previous || draft.phone !== previous.phone) saved.phone = phoneKey(saved.phone);
+            if (previous) Object.assign(previous, saved);
+            else tables.leads.push(saved);
+            return send(200, saved);
+        }
         const table = url.pathname.replace("/rest/v1/", "");
         if (!url.pathname.startsWith("/rest/v1/") || !Object.hasOwn(tables, table)) {
             return send(404, { message: `Unimplemented test endpoint: ${request.method} ${url.pathname}` });
