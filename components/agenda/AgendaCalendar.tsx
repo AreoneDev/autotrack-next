@@ -16,21 +16,22 @@ type Props = {
 export default function AgendaCalendar({ selectedDate, onSelectDate, unfinishedTaskCount, pastUnfinishedTaskCounts, todayDateString }: Props) {
     const region = useRef<HTMLElement>(null);
     const pendingKeyboardFocus = useRef<string | null>(null);
-    useEffect(() => {
-        const date = pendingKeyboardFocus.current;
-        if (!date) return;
-        pendingKeyboardFocus.current = null;
-        region.current?.querySelector<HTMLButtonElement>(`[data-date="${date}"]`)?.focus();
-    }, [selectedDate]);
     function navigateMonth(month: Date) {
         const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
         onSelectDate(new Date(month.getFullYear(), month.getMonth(), Math.min(selectedDate.getDate(), lastDay)));
     }
     function AgendaDay({ day, modifiers, ...props }: React.ComponentProps<typeof DayButton>) {
         const ref = useRef<HTMLButtonElement>(null);
-        useEffect(() => { if (modifiers.focused) ref.current?.focus(); }, [modifiers.focused]);
         const date = day.date;
         const key = localDateInput(date);
+        useEffect(() => {
+            if (pendingKeyboardFocus.current === key) {
+                pendingKeyboardFocus.current = null;
+                ref.current?.focus();
+            } else if (modifiers.focused) {
+                ref.current?.focus();
+            }
+        }, [key, modifiers.focused]);
         const active = !!modifiers.selected;
         const count = active ? unfinishedTaskCount : key < todayDateString ? pastUnfinishedTaskCounts[key] ?? 0 : 0;
         return <Button {...props} aria-label={undefined} ref={ref} type="button" variant="ghost" data-date={key} aria-pressed={active}
