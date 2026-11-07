@@ -76,7 +76,7 @@ describe("DB — repository mapping and failure contracts", () => {
         const db = scriptedClient([{ data: [
             { notification_id: 1, lead_id: null, title: null, date: "2026-06-20T14:30:00Z" },
             { notification_id: 2, lead_id: 7, title: "Incoming call", date: "2026-06-20T15:30:00Z" },
-        ] }]);
+        ] }, { data: [] }]);
         const result = await new NotificationRepo(db.client).getAllNotifications();
         expect(result[0].getLead()).toBeNull();
         expect(result[0].getTitle()).toBe("");

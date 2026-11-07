@@ -18,7 +18,7 @@ export function scriptedClient(replies: Reply[]) {
 
 function makeQuery(reply: Reply) {
     const chain = {
-        select: jest.fn(), order: jest.fn(), eq: jest.fn(), neq: jest.fn(), not: jest.fn(), gte: jest.fn(), lt: jest.fn(),
+        returns: jest.fn(), select: jest.fn(), order: jest.fn(), eq: jest.fn(), neq: jest.fn(), not: jest.fn(), gte: jest.fn(), lt: jest.fn(),
         in: jest.fn(), or: jest.fn(), ilike: jest.fn(), limit: jest.fn(), range: jest.fn(), insert: jest.fn(), update: jest.fn(),
         delete: jest.fn(), upsert: jest.fn(), maybeSingle: jest.fn(), single: jest.fn(),
         then: (resolve: (value: Reply) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(reply).then(resolve, reject),
