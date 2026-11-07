@@ -9,7 +9,7 @@ jest.mock("@/lib/supabase/client", () => ({ supabase: {} }));
 describe("DB — repository mapping and failure contracts", () => {
     it.each([" closed ", " delivered "])("legacy %s reads remain untouched; explicit writes normalize terminal state", async (stage) => {
         const row = { lead_id: 7, first_name: "Legacy", stage, status: true, score: 200 };
-        const db = scriptedClient([{ data: row }, { data: row }, {}]);
+        const db = scriptedClient([{ data: row }, { data: row }, { data: row }]);
         const repo = new LeadRepo(db.client);
         const lead = (await repo.getLeadById(7))!;
         expect(lead).toMatchObject({ stage, status: true, score: 200 });
@@ -17,9 +17,12 @@ describe("DB — repository mapping and failure contracts", () => {
         expect(db.queries).toHaveLength(1);
         expect(db.queries[0].update).not.toHaveBeenCalled();
         expect(await repo.updateLead(lead)).toBeNull();
-        expect(db.queries[2].update).toHaveBeenCalledWith(expect.objectContaining({
-            stage: stage.trim().toUpperCase(), status: false, score: 0,
-        }));
+        expect(db.rpc).toHaveBeenCalledWith("save_lead_validated", {
+            p_lead: expect.objectContaining({
+                lead_id: 7, stage: stage.trim().toUpperCase(), status: false, score: 0,
+            }),
+            p_duplicate_ids: [],
+        });
         expect(lead).toMatchObject({ stage, status: true, score: 200 });
     });
 
@@ -35,7 +38,7 @@ describe("DB — repository mapping and failure contracts", () => {
         const lead = makeLead({ leadID: 0, lastInteractionDate: null });
         expect(await new LeadRepo(db.client).insertLead(lead)).toBeNull();
         expect(lead.leadID).toBe(42);
-        const payload = db.queries[0].insert.mock.calls[0][0];
+        const payload = db.rpc.mock.calls[0][1]?.p_lead;
         expect(payload).toMatchObject({ first_name: "Ada", follow_up_date: lead.followUpDate.toISOString(), created_at: lead.createdAt.toISOString(), last_interaction_date: null });
         expect(payload).not.toHaveProperty("lead_id");
     });
@@ -76,12 +79,15 @@ describe("DB — repository mapping and failure contracts", () => {
         });
     });
 
-    it("DB-LEAD-07: update uses the requested lead id", async () => {
-        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, {}]);
+    it("DB-LEAD-07: update and delete use the requested lead id", async () => {
+        const db = scriptedClient([{ data: { lead_id: 7, first_name: "Ada" } }, { data: { lead_id: 7, first_name: "Ada" } }, {}]);
         const repo = new LeadRepo(db.client);
         expect(await repo.updateLead(makeLead({ leadID: 7, status: false }))).toBeNull();
-        expect(db.queries[1].update).toHaveBeenCalledWith(expect.objectContaining({ lead_id: 7, status: false }));
-        expect(db.queries[1].eq).toHaveBeenCalledWith("lead_id", 7);
+        expect(db.rpc).toHaveBeenCalledWith("save_lead_validated", {
+            p_lead: expect.objectContaining({ lead_id: 7, status: false }), p_duplicate_ids: [],
+        });
+        expect(await repo.deleteLead(7)).toBeNull();
+        expect(db.rpc).toHaveBeenCalledWith("autotrack_delete_lead", { p_lead_id: 7 });
     });
 
     it("DB-NOTIF-01: notifications map timestamps and optional lead references", async () => {
