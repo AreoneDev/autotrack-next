@@ -49,13 +49,19 @@ beforeEach(() => {
     jest.mocked(ContactHistoryRepo).mockImplementation(() => ({ getPage }) as unknown as ContactHistoryRepo);
 });
 
+async function renderPanel(props: { lead?: LeadDetailViewModel; tasks?: []; notifications?: [] } = {}) {
+    const panel = render(<LeadDetailPanel lead={props.lead ?? viewModel()} tasks={props.tasks ?? []} notifications={props.notifications ?? []} />);
+    await screen.findByText("No contact history for this lead.");
+    return panel;
+}
+
 it.each(["Call", "Email", "Message"])("logs %s through the synchronized path and displays confirmed contact time", async (label) => {
-    render(<LeadDetailPanel lead={viewModel()} tasks={[]} notifications={[]} />);
+    await renderPanel();
     fireEvent.click(screen.getByRole("button", { name: label }));
     await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
     expect(log).toHaveBeenCalledTimes(1);
     expect(log.mock.calls[0][0]).toMatchObject({ operationId, channel: label.toLowerCase(), leadId: 1 });
-    expect(screen.getByText(result(log.mock.calls[0][0]).notification.getTitle())).toBeInTheDocument();
+    expect(await screen.findByText(result(log.mock.calls[0][0]).notification.getTitle())).toBeInTheDocument();
     expect(screen.getByText(/UTC$/)).toBeInTheDocument();
     expect(sessionStorage.getItem(`autotrack:communication:1:${label.toLowerCase()}`)).toBeNull();
 });
@@ -63,7 +69,7 @@ it.each(["Call", "Email", "Message"])("logs %s through the synchronized path and
 it("prevents a second synchronous submission while the first write is pending", async () => {
     let complete!: (value: ReturnType<typeof result>) => void;
     log.mockReturnValue(new Promise((resolve) => { complete = resolve; }));
-    render(<LeadDetailPanel lead={viewModel()} tasks={[]} notifications={[]} />);
+    await renderPanel();
     const button = screen.getByRole("button", { name: "Call" });
     fireEvent.click(button);
     fireEvent.click(button);
@@ -75,27 +81,29 @@ it("prevents a second synchronous submission while the first write is pending", 
 
 it("keeps a failed request across remount and retries with the original identity and timestamp", async () => {
     log.mockRejectedValueOnce(new Error("Transport failed"));
-    const first = render(<LeadDetailPanel lead={viewModel()} tasks={[]} notifications={[]} />);
+    const first = await renderPanel();
     fireEvent.click(screen.getByRole("button", { name: "Call" }));
     await screen.findByText("Transport failed");
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(screen.queryByText("You called Ada Chen")).not.toBeInTheDocument();
     const original = log.mock.calls[0][0];
     first.unmount();
-    render(<LeadDetailPanel lead={viewModel()} tasks={[]} notifications={[]} />);
+    await renderPanel();
     fireEvent.click(screen.getByRole("button", { name: "Call" }));
     await screen.findByText("You called Ada Chen");
     expect(log.mock.calls[1][0]).toEqual(original);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
 });
 
-it("adopts refreshed lead, tasks and notifications without leaving mounted state stale", () => {
+it("adopts refreshed lead, tasks and notifications without leaving mounted state stale", async () => {
     const lead = viewModel();
-    const panel = render(<LeadDetailPanel lead={lead} tasks={[]} notifications={[]} />);
+    const panel = await renderPanel({ lead });
+    historyRecords = [{ notificationID: 9, leadID: 1, title: "Server contact",
+        occurredAt: "2026-11-07T15:12:00Z", details: null }];
     panel.rerender(<LeadDetailPanel lead={{ ...lead, lastInteractionDate: "2026-11-07T15:12:00Z", lastInteractionBy: "USER", score: 35 }}
         tasks={[{ taskID: 5, leadID: 1, title: "Server follow-up", taskType: "Follow-up", notes: "", date: "2026-11-08", time: "09:00", completed: false }]}
         notifications={[{ notificationID: 9, leadID: 1, title: "Server contact", date: "2026-11-07" }]} />);
     expect(screen.getByText("Server follow-up")).toBeInTheDocument();
-    expect(screen.getByText("Server contact")).toBeInTheDocument();
+    expect(await screen.findByText("Server contact")).toBeInTheDocument();
     expect(screen.getByText(/UTC$/)).toBeInTheDocument();
 });
