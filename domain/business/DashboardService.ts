@@ -1,3 +1,4 @@
+import { summarizeMessageReplies, type MessageReplyRecord } from "@/domain/business/MessageReplyService";
 import { AgendaService } from "@/domain/business/AgendaService";
 import {
     RecentActivityItem,
@@ -57,7 +58,7 @@ export type DashboardRecentActivityItem = RecentActivityItem;
 export type DashboardMetrics = {
     todayTaskCount: number;
     highPriorityLeadCount: number;
-    unrepliedMessageCount: number;
+    unrepliedMessageCount: number | null;
     overdueTaskCount: number;
 };
 
@@ -88,7 +89,8 @@ export class DashboardService {
         leads: Lead[],
         tasks: Task[],
         notifications: Notification[],
-        targetDate: Date
+        targetDate: Date,
+        replyRecords: MessageReplyRecord[] | null = null
     ): DashboardData {
         const todayTasks = this.getTodayTasks(tasks, leads, targetDate);
         const overdueTasks = this.getOverdueTasks(tasks, targetDate);
@@ -110,8 +112,8 @@ export class DashboardService {
             metrics: {
                 todayTaskCount: todayTasks.length,
                 highPriorityLeadCount: highPriorityLeads.length,
-                // TODO: Replace with NotificationRepository or message activity tracking once inbound message state exists.
-                unrepliedMessageCount: 0,
+                // Only explicit inbound records count; missing tracking is not an empty inbox.
+                unrepliedMessageCount: replyRecords === null ? null : summarizeMessageReplies(replyRecords, targetDate).pending,
                 overdueTaskCount: overdueTasks.length,
             },
             todayTasks,
