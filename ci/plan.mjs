@@ -83,6 +83,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const plan = eventPlan(process.env.GITHUB_EVENT_NAME, event);
     const testedSha = process.env.GITHUB_SHA;
     if (!sha(testedSha)) throw new Error('Missing tested commit SHA');
+    if (git(['rev-parse', 'HEAD']).trim() !== testedSha) throw new Error('Checkout does not match tested commit SHA');
     console.log(JSON.stringify({ testedSha, ...plan }, null, 2));
     for (const suite of suites) appendFileSync(process.env.GITHUB_OUTPUT, suite + '=' + plan[suite] + '\n');
     appendFileSync(process.env.GITHUB_OUTPUT, 'tested_sha=' + testedSha + '\n');
