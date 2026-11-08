@@ -98,7 +98,7 @@ try {
             assert.deepEqual(results[0].value, results[1].value);
         } else {
             assert.equal(results.filter(r => r.value).length, 1);
-            assert.equal(results.find(r => r.error)?.error.code, "40001");
+            assert.equal(results.find(r => r.error)?.error.code, "PT409");
         }
         for (const table of ["lead_vehicle_interests", "lead_trade_in_vehicles"]) {
             const link = (await admin.query(`select * from public.${table} where lead_id=$1`, [id])).rows[0];

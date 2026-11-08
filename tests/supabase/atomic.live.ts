@@ -36,7 +36,8 @@ it("stale editor: the second aggregate save changes nothing", async () => {
     const committed = await db.from("leads").select("version").eq("lead_id", row.lead_id).single();
     expect(committed.data?.version).toBe(2);
     const stale = await db.rpc("autotrack_save_lead_details", draft(row.lead_id, "Editor B"));
-    expect(stale.error).toMatchObject({ code: "40001" });
+    expect(stale.status).toBe(409);
+    expect(stale.error).toMatchObject({ code: "PT409" });
     const saved = await db.from("leads").select().eq("lead_id", row.lead_id).single();
     expect(saved.error).toBeNull();
     expect(saved.data.version).toBe(2);

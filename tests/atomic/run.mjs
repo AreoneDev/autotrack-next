@@ -103,7 +103,7 @@ try {
     }
     await test("stale editor rejected; immutable metadata and empty names rejected", async () => {
         const state = await snapshot(id);
-        await rejects(save(id, 1, randomUUID(), { first_name: "Stale" }), "40001");
+        await rejects(save(id, 1, randomUUID(), { first_name: "Stale" }), "PT409");
         for (const details of [{ owner_id: b }, { version: 999 }, { created_at: "2000-01-01" }, { first_name: "", last_name: "" }]) {
             await rejects(save(id, version, randomUUID(), details), "22023");
         }

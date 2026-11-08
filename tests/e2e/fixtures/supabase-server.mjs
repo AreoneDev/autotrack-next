@@ -113,7 +113,7 @@ const server = createServer(async (request, response) => {
             const previous = saveRequests.get(body.p_request_id);
             if (previous) return previous.fingerprint === fingerprint ? send(200, previous.result)
                 : send(400, { message: "Request ID was already used for different changes." });
-            if (row.version !== body.p_expected_version) return send(409, { code: "40001", message: "This lead changed in another session. Reload before saving again." });
+            if (row.version !== body.p_expected_version) return send(409, { code: "PT409", message: "This lead changed in another session. Reload before saving again." });
             const staged = structuredClone(tables);
             const checkFailure = (table, method) => {
                 if (failure?.table === table && failure.method === method) {

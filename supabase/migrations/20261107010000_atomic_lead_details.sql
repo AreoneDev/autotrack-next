@@ -94,7 +94,8 @@ begin
     return receipt.result;
   end if;
   if current_lead.version <> p_expected_version then
-    raise exception 'This lead changed in another session. Reload before saving again.' using errcode = '40001';
+    -- 40001 is reserved for retryable serialization failures in PostgREST.
+    raise exception 'This lead changed in another session. Reload before saving again.' using errcode = 'PT409';
   end if;
   if jsonb_typeof(p_details) is distinct from 'object' or p_details - array[
     'first_name','last_name','phone','lead_email','lead_division','lead_address','lead_city',
@@ -123,7 +124,7 @@ begin
     where lead_id = p_lead_id and version = p_expected_version
     returning version into saved_version;
   if not found then
-    raise exception 'This lead changed in another session. Reload before saving again.' using errcode = '40001';
+    raise exception 'This lead changed in another session. Reload before saving again.' using errcode = 'PT409';
   end if;
 
   if interest is null then

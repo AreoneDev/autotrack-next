@@ -66,7 +66,7 @@ it("keeps draft on failure; unchanged retry uses one RPC with the same request/v
 });
 
 it("changing a failed draft gets a new request ID; a conflict preserves the draft", async () => {
-    rpc.mockResolvedValue({ data: null, error: { code: "40001", message: "Reload before saving again." } } as never);
+    rpc.mockResolvedValue({ data: null, error: { code: "PT409", message: "Reload before saving again." } } as never);
     edit();
     save();
     await screen.findByText("Reload before saving again.");
