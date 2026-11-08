@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const suites = ['checks', 'supabase', 'browser', 'dependencies', 'recovery'];
+export const suites = ['checks', 'e2e', 'supabase', 'browser', 'dependencies', 'recovery'];
 const full = reason => ({ ...Object.fromEntries(suites.map(s => [s, true])), reasons: [reason] });
 
 // Narrow allowlists are intentional: a new/unclassified path gets the full suite.
@@ -17,12 +17,12 @@ export function classify(paths, force = false) {
         if (/^(docs\/|Storyboard\/)/.test(path) || /^(README|AGENTS|CLAUDE|DevLog)\.md$/.test(path)
             || /^tests\/.*\.md$/.test(path)) continue;
         if (/^(app\/|components\/|public\/)/.test(path)) {
-            add(['checks', 'browser'], 'Application, UI or asset change');
+            add(['checks', 'e2e', 'browser'], 'Application, UI or asset change');
         } else if (/^tests\/(unit|integration|ui)\//.test(path)) {
             add(['checks'], 'Jest test change');
         } else if (/^tests\/e2e\//.test(path)) {
             // NFR imports the same backend/journey fixtures.
-            add(['checks', 'browser'], 'Browser test or shared HTTP fixture change');
+            add(['checks', 'e2e', 'browser'], 'Browser test or shared HTTP fixture change');
         } else if (/^tests\/supabase\//.test(path)) {
             add(['supabase'], 'Supabase test change');
         } else if (path === 'tests/nonfunctional/dependency-audit.mjs') {

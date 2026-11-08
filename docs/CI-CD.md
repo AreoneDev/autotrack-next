@@ -10,14 +10,14 @@ hosted migrations, or changes customer data.
 | Changed paths | Required suites |
 | --- | --- |
 | Root README/AGENTS/CLAUDE/DevLog, docs/, Storyboard/, tests/**/*.md | Planner/gate self-tests only |
-| app/, components/, public/ | Lint + types + all Jest/coverage + all four E2E projects/accessibility; NFR browser/security/performance/load |
-| tests/unit/, tests/integration/, tests/ui/ | Lint + types + all Jest/coverage + all four E2E projects/accessibility |
-| tests/e2e/ (including its shared fixtures) | Functional checks and NFR browser |
+| app/, components/, public/ | Lint + types + all Jest/coverage + production build; all four E2E projects/accessibility; NFR browser/security/performance/load |
+| tests/unit/, tests/integration/, tests/ui/ | Lint + types + all Jest/coverage + production build (browser journeys skipped) |
+| tests/e2e/ (including its shared fixtures) | Code checks, E2E journeys and NFR browser |
 | tests/supabase/ | Disposable Supabase migrations/Auth/repositories/RLS |
 | tests/recovery/, tests/data-recovery/ | PostgreSQL backup/restore, PGlite recovery/export, Supabase (shared bootstrap SQL) |
 | tests/nonfunctional/dependency-audit.mjs | Production and development dependency audit |
 | Other tests/nonfunctional/ | NFR browser |
-| lib/, domain/, proxy, SQL/Supabase, dependencies/lockfile, CI, shared fixtures/configuration, unknown paths | All five suites |
+| lib/, domain/, proxy, SQL/Supabase, dependencies/lockfile, CI, shared fixtures/configuration, unknown paths | All six suites |
 
 Selection is deliberately by suite, not a heuristic per individual test: this app
 has cross-page and shared repository contracts. New/unclassified paths default to
@@ -53,7 +53,7 @@ which was absent from the previous workflows.
 ## Gate rollout without a protection gap
 
 1. Validate this branch and obtain successful PR CI and push Production CI.
-   CI changes themselves always trigger all five old checks.
+   CI changes themselves always trigger all six suites, including all five old checks.
 2. Add PR CI (GitHub Actions as source) to main protection **alongside** the five
    existing checks. Enable up-to-date branches; preserve required PRs/admin enforcement,
    disabled force pushes/deletions, and do not require Vercel deployment success.

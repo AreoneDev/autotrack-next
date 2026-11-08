@@ -18,12 +18,12 @@ for (const path of ['lib/date.ts', 'domain/objects/Lead.ts', 'proxy.ts', 'supaba
     test('full regression: ' + path, () => all([path]));
 }
 for (const [path, expected] of [
-    ['components/AccountMenu.tsx', ['checks', 'browser']],
-    ['app/globals.css', ['checks', 'browser']],
-    ['public/logo.svg', ['checks', 'browser']],
+    ['components/AccountMenu.tsx', ['checks', 'e2e', 'browser']],
+    ['app/globals.css', ['checks', 'e2e', 'browser']],
+    ['public/logo.svg', ['checks', 'e2e', 'browser']],
     ['tests/ui/LoginPage.test.tsx', ['checks']],
     ['tests/integration/persistence/real/LeadRepo.test.ts', ['checks']],
-    ['tests/e2e/fixtures/supabase-server.mjs', ['checks', 'browser']],
+    ['tests/e2e/fixtures/supabase-server.mjs', ['checks', 'e2e', 'browser']],
     ['tests/supabase/security.live.ts', ['supabase']],
     ['tests/recovery/bootstrap.sql', ['supabase', 'recovery']],
     ['tests/data-recovery/run.mjs', ['supabase', 'recovery']],
@@ -123,7 +123,7 @@ test('workflow wires every selectable job into its always-running aggregate', as
     assert.match(workflow, /fetch-depth: 0/);
     assert.doesNotMatch(workflow, /^\s+paths(?:-ignore)?:/m);
     assert.match(workflow, /if: \$\{\{ always\(\) \}\}/);
-    assert.match(workflow, /needs: \[plan, checks, supabase, browser, dependencies, recovery\]/);
+    assert.match(workflow, /needs: \[plan, checks, e2e, supabase, browser, dependencies, recovery\]/);
     for (const suite of suites) {
         const block = workflow.split('\n  ' + suite + ':')[1]?.split(/\n  [a-z]+:/)[0];
         assert.ok(block, suite);

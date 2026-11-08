@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       checks: ${{ steps.plan.outputs.checks }}
+      e2e: ${{ steps.plan.outputs.e2e }}
       supabase: ${{ steps.plan.outputs.supabase }}
       browser: ${{ steps.plan.outputs.browser }}
       dependencies: ${{ steps.plan.outputs.dependencies }}
@@ -62,16 +63,36 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  e2e:
+    name: Browser journeys and accessibility
+    needs: plan
+    if: needs.plan.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
-      # The Playwright webServer builds production code before starting it.
+      # Playwright builds production code against synthetic loopback fixtures.
       - name: Browser journeys and accessibility scans (all four projects)
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-reports
+          name: browser-journeys
           path: |
-            coverage/
             playwright-report/
             test-results/
           if-no-files-found: ignore
@@ -171,7 +192,7 @@ jobs:
     # Vercel's requirement for CI on the exact main push SHA.
     name: ${{ github.event_name == 'push' && 'Production CI' || (github.event_name == 'pull_request' || github.event_name == 'merge_group') && 'PR CI' || 'Full regression CI' }}
     if: ${{ always() }}
-    needs: [plan, checks, supabase, browser, dependencies, recovery]
+    needs: [plan, checks, e2e, supabase, browser, dependencies, recovery]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
