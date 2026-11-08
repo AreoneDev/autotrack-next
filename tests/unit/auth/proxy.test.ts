@@ -20,7 +20,7 @@ describe("protected page requests", () => {
     });
     it("does not redirect login or the email callback", async () => {
         claims.mockResolvedValue({ data: null, error: null });
-        for (const path of ["/login", "/auth/callback?code=example"]) {
+        for (const path of ["/login", "/forgot-password", "/reset-password", "/resend-confirmation", "/auth/callback?code=example"]) {
             expect((await proxy(new NextRequest(`http://localhost:3000${path}`))).status).toBe(200);
         }
     });

@@ -26,6 +26,39 @@ before Turbopack connected to it. Run the build in an environment that permits
 local loopback connections between the build process and its children. This
 does not require changing the project's bundler or exposing a network service.
 
+## Account recovery
+
+The sign-in page links to `/forgot-password` and `/resend-confirmation`.
+Password reset emails return through `/auth/callback?next=/reset-password`;
+signup confirmations and sign-in links retain `/auth/callback`.
+The callback exchanges the PKCE code and writes session cookies before redirecting.
+The password form verifies the current user with Supabase before allowing updates.
+It uses the current browser session; links should be opened in the browser that requested them.
+
+For each deployed origin, Supabase Auth URL Configuration must allow both callback
+URLs above. Use the real application origin for Site URL, without literal wrapping
+quotes or trailing encoded characters. If email templates are customized, preserve
+the request's RedirectTo value (including its recovery query) in the confirmation
+URL. Existing templates using Supabase's `{{ .ConfirmationURL }}` need no application
+token-hash route. SMTP delivery, email confirmation, password policy and rate limits
+remain Supabase configuration; this change does not modify them.
+
+Expired, consumed and unverifiable links offer another request. Email forms use
+neutral success messages and a 60-second retry delay, and show service/rate-limit
+failures without claiming delivery. Settings UI is outside this flow.
+
+Recovery tests use mocks and a loopback HTTP double, including a synthetic PKCE
+challenge, one-use code, and password update. They send no real email and do not
+prove hosted SMTP delivery or production redirect configuration. Run:
+
+```bash
+npm test -- --runInBand tests/ui/AccountRecovery.test.tsx tests/ui/LoginPage.test.tsx tests/ui/AuthGate.test.tsx tests/integration/auth/callback.test.ts tests/unit/auth/proxy.test.ts
+npx playwright test account-recovery.spec.ts auth.spec.ts --project=chromium --project=mobile-chromium
+```
+
+API references: [password recovery](https://supabase.com/docs/guides/auth/passwords)
+and [confirmation resend](https://supabase.com/docs/reference/javascript/auth-resend).
+
 ## Continuous integration
 
 Test commands and the risk-based test inventory are documented in

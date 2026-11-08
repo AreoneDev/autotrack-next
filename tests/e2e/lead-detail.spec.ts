@@ -125,7 +125,8 @@ test("E2E-DETAIL-03: unknown lead offers a working route back to the list", asyn
 });
 
 for (const table of ["lead_vehicle_interests", "lead_trade_in_vehicles"]) {
-    test(`vehicle association failure after lead update: ${table}`, async ({ page, request }) => {
+    test(`atomic save rolls back on association failure: ${table}`, async ({ page, request }) => {
+        const before = await state(request);
         await page.getByRole("button", { name: "Modify", exact: true }).click();
         await page.getByLabel("First Name", { exact: true }).fill("Partially Saved");
         await failNext(request, table, "DELETE");
@@ -133,8 +134,8 @@ for (const table of ["lead_vehicle_interests", "lead_trade_in_vehicles"]) {
 
         await expect(page.getByText("Synthetic write failure", { exact: true })).toBeVisible();
         await expect(page.getByLabel("First Name", { exact: true })).toHaveValue("Partially Saved");
-        expect((await state(request)).leads[0].first_name).toBe("Partially Saved");
+        expect(await state(request)).toEqual(before);
         await page.reload();
-        await expect(page.getByRole("heading", { name: "Partially Saved Customer", exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Journey Customer", exact: true })).toBeVisible();
     });
 }

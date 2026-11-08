@@ -55,6 +55,7 @@ function toLeadDetailViewModel(
 
     return {
         leadID: lead.leadID,
+        version: lead.version,
         firstName: lead.firstName,
         lastName: lead.lastName,
         phone: lead.phone,

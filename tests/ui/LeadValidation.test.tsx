@@ -19,8 +19,8 @@ const insert = jest.fn(), update = jest.fn();
 const match = { leadID: 8, name: "Existing Customer", email: true, phone: false };
 beforeEach(() => {
     insert.mockReset().mockResolvedValue(null);
-    update.mockReset().mockResolvedValue(null);
-    jest.mocked(LeadRepo).mockImplementation(() => ({ insertLead: insert, updateLead: update }) as unknown as LeadRepo);
+    update.mockReset().mockResolvedValue({ version: 2, vehicleInterestId: null, tradeInVehicleId: null });
+    jest.mocked(LeadRepo).mockImplementation(() => ({ insertLead: insert, saveLeadDetails: update }) as unknown as LeadRepo);
 });
 const change = (name: string, value: string) => fireEvent.change(screen.getByLabelText(name, { exact: true }), { target: { value } });
 function create() {
@@ -98,7 +98,7 @@ describe("edit validation and duplicate UX", () => {
         expect(await screen.findByRole("button", { name: "Modify" })).toBeInTheDocument();
         expect(update).toHaveBeenCalledWith(expect.objectContaining({
             firstName: "Renamed", phone: "legacy extension", leadEmail: "unknown", budget: -5,
-        }));
+        }), expect.anything(), expect.anything(), expect.any(String), []);
     });
     it("warns before saving a duplicate edit and persists only after explicit confirmation", async () => {
         update.mockRejectedValueOnce(new DuplicateLeadError([match]));
@@ -108,7 +108,7 @@ describe("edit validation and duplicate UX", () => {
         expect(screen.getByLabelText("Email", { exact: true })).toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: "Save Anyway" }));
         expect(await screen.findByRole("button", { name: "Modify" })).toBeInTheDocument();
-        expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ leadEmail: "same@example.test" }), [8]);
+        expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ leadEmail: "same@example.test" }), expect.anything(), expect.anything(), expect.any(String), [8]);
     });
     it("clears pending warning and invalid draft values when edits are cancelled", async () => {
         update.mockRejectedValueOnce(new DuplicateLeadError([match]));

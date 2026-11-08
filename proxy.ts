@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isPublicAuthPage } from "@/lib/auth/routes";
 
 export async function proxy(request: NextRequest) {
     // Former development pages performed writes while rendering.
@@ -22,7 +23,7 @@ export async function proxy(request: NextRequest) {
         }
     );
     const { data, error } = await client.auth.getClaims();
-    if ((error || !data?.claims) && request.nextUrl.pathname !== "/login" && !request.nextUrl.pathname.startsWith("/auth/")) {
+    if ((error || !data?.claims) && !isPublicAuthPage(request.nextUrl.pathname) && !request.nextUrl.pathname.startsWith("/auth/")) {
         const destination = request.nextUrl.clone();
         destination.pathname = "/login";
         destination.search = "";

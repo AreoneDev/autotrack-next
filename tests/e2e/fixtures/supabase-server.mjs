@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
@@ -14,6 +15,9 @@ const user = {
 let tables;
 let nextId;
 let failure;
+let saveRequests;
+let accountPassword;
+let recoveryLink;
 function reset(seed = {}) {
     user.user_metadata = {};
     tables = {
@@ -22,9 +26,12 @@ function reset(seed = {}) {
     };
     nextId = 100;
     failure = null;
+    saveRequests = new Map();
+    accountPassword = "test-password-123";
+    recoveryLink = null;
     for (const [table, rows] of Object.entries(seed)) {
         if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
-        tables[table] = table === "leads" ? rows.map((row) => ({ version: 1, ...row })) : rows;
+        tables[table] = rows.map(row => table === "leads" ? { version: 1, ...row } : row);
         for (const row of rows) {
             const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
             const id = row[idColumn];
@@ -90,8 +97,40 @@ const server = createServer(async (request, response) => {
             failure = { ...body, remaining: body.count ?? 1 };
             return send(200, {});
         }
+        if (url.pathname === "/__test__/recovery-link" && request.method === "GET") {
+            if (!recoveryLink) return send(404, { message: "No synthetic recovery request" });
+            return send(200, { url: recoveryLink.url });
+        }
+        if (["/auth/v1/recover", "/auth/v1/resend"].includes(url.pathname) && request.method === "POST") {
+            const redirectTo = url.searchParams.get("redirect_to") ?? body.emailRedirectTo ?? body.redirect_to;
+            if (typeof redirectTo !== "string") return send(400, { message: "Missing synthetic redirect" });
+            const redirect = new URL(redirectTo);
+            if (redirect.origin !== `http://127.0.0.1:${appPort}`) return send(400, { message: "Invalid synthetic redirect" });
+            redirect.searchParams.set("code", "synthetic-recovery-code");
+            recoveryLink = { url: redirect.href, challenge: body.code_challenge, used: false };
+            return send(200, {});
+        }
+        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
+            if (typeof body.password === "string") {
+                if (body.password.length < 8) return send(422, { code: "weak_password", msg: "Weak password" });
+                accountPassword = body.password;
+            }
+            if (body.data && typeof body.data === "object" && !Array.isArray(body.data)) {
+                user.user_metadata = { ...user.user_metadata, ...body.data };
+            }
+            return send(200, user);
+        }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
-            if (body.email !== user.email || body.password !== "test-password-123") {
+            if (url.searchParams.get("grant_type") === "pkce") {
+                const challenge = createHash("sha256").update(body.code_verifier ?? "").digest("base64url");
+                if (!recoveryLink || recoveryLink.used || body.auth_code !== "synthetic-recovery-code" || challenge !== recoveryLink.challenge) {
+                    return send(400, { code: "otp_expired", msg: "Invalid synthetic PKCE exchange" });
+                }
+                recoveryLink.used = true;
+                return send(200, session());
+            }
+            if (body.email !== user.email || body.password !== accountPassword) {
                 return send(400, { code: "invalid_credentials", msg: "Invalid login credentials" });
             }
             return send(200, session());
@@ -100,14 +139,67 @@ const server = createServer(async (request, response) => {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
             return send(200, user);
         }
-        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
-            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            user.user_metadata = { ...user.user_metadata, ...body.data };
-            return send(200, user);
-        }
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
         if (url.pathname === "/auth/v1/otp" && request.method === "POST") return send(200, {});
         if (url.pathname === "/auth/v1/logout" && request.method === "POST") return send(200, {});
+        // Browser contract double only. Real SQL rollback/RLS is tested by
+        // tests/atomic and tests/supabase, never inferred from this simulation.
+        if (url.pathname === "/rest/v1/rpc/autotrack_save_lead_details" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const row = tables.leads.find(l => l.lead_id === body.p_lead_id);
+            if (!row) return send(404, { message: "Lead not found." });
+            const fingerprint = JSON.stringify(body);
+            const previous = saveRequests.get(body.p_request_id);
+            if (previous) return previous.fingerprint === fingerprint ? send(200, previous.result)
+                : send(400, { message: "Request ID was already used for different changes." });
+            if (row.version !== body.p_expected_version) return send(409, { code: "PT409", message: "This lead changed in another session. Reload before saving again." });
+            const emailKey = value => (value ?? "").trim().toLowerCase();
+            const phoneKey = value => {
+                let key = (value ?? "").replace(/[\s().-]/g, "");
+                if (/^00/.test(key)) key = "+" + key.slice(2);
+                if (/^\d{10}$/.test(key)) key = "+1" + key;
+                else if (/^1\d{10}$/.test(key)) key = "+" + key;
+                return key;
+            };
+            const email = emailKey(body.p_details.lead_email), phone = phoneKey(body.p_details.phone);
+            const emailChanged = email !== emailKey(row.lead_email), phoneChanged = phone !== phoneKey(row.phone);
+            const matches = tables.leads.filter(other => other !== row).map(other => ({
+                leadID: other.lead_id, name: [other.first_name, other.last_name].filter(Boolean).join(" "),
+                email: Boolean(emailChanged && email && emailKey(other.lead_email) === email),
+                phone: Boolean(phoneChanged && phone && phoneKey(other.phone) === phone),
+            })).filter(match => match.email || match.phone);
+            if (matches.some(match => !(body.p_duplicate_ids ?? []).includes(match.leadID))) {
+                return send(400, { code: "P0001", message: "AUTOTRACK_DUPLICATE_LEAD", details: JSON.stringify(matches) });
+            }
+            const staged = structuredClone(tables);
+            const checkFailure = (table, method) => {
+                if (failure?.table === table && failure.method === method) {
+                    failure = null;
+                    throw new Error("Synthetic write failure");
+                }
+            };
+            checkFailure("leads", "PATCH");
+            Object.assign(staged.leads.find(l => l.lead_id === row.lead_id), body.p_details, { version: row.version + 1 });
+            function association(table, selection) {
+                const empty = !selection || Object.values(selection).every(v => !String(v).trim());
+                checkFailure(table, empty ? "DELETE" : "POST");
+                staged[table] = staged[table].filter(r => r.lead_id !== row.lead_id);
+                if (empty) return null;
+                const matches = tables.vehicles.filter(v => v.year === Number(selection.year)
+                    && v.make.toLowerCase() === selection.make.toLowerCase() && v.model.toLowerCase() === selection.model.toLowerCase());
+                const vehicle = matches.find(v => v.trim?.toLowerCase() === selection.trim.toLowerCase()) ?? matches[0];
+                if (!vehicle) throw new Error("Selected vehicle was not found in the catalog.");
+                staged[table].push({ lead_id: row.lead_id, vehicle_id: vehicle.vehicle_id,
+                    trim_override: selection.trim && selection.trim !== vehicle.trim ? selection.trim : null });
+                return vehicle.vehicle_id;
+            }
+            const interest = association("lead_vehicle_interests", body.p_interest);
+            const tradeIn = association("lead_trade_in_vehicles", body.p_trade_in);
+            const result = { version: row.version + 1, vehicle_interest_id: interest, trade_in_vehicle_id: tradeIn };
+            tables = staged;
+            saveRequests.set(body.p_request_id, { fingerprint, result });
+            return send(200, result);
+        }
         // Journey double only. Real transaction/RLS assertions live in
         // tests/supabase/communication-checks.sql, executed by test:supabase.
         if (url.pathname === "/rest/v1/rpc/autotrack_log_communication" && request.method === "POST") {
@@ -217,7 +309,7 @@ const server = createServer(async (request, response) => {
         if (request.method === "POST") {
             const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
             if (!idColumn) return send(400, { message: `Unsupported test insert: ${table}` });
-            const inserted = (Array.isArray(body) ? body : [body]).map((row) => ({ ...row, [idColumn]: row[idColumn] ?? nextId++ }));
+            const inserted = (Array.isArray(body) ? body : [body]).map((row) => ({ ...(table === "leads" ? { version: 1 } : {}), ...row, [idColumn]: row[idColumn] ?? nextId++ }));
             tables[table].push(...inserted);
             return send(201, request.headers.accept?.includes("vnd.pgrst.object+json") ? inserted[0] : inserted);
         }

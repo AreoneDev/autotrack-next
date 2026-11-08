@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { resetAuth, router, supabase } from "@/tests/helpers/auth";
 import { deferred } from "@/tests/helpers/deferred";
@@ -9,7 +10,25 @@ jest.mock("@/lib/supabase/client", () => jest.requireActual("@/tests/helpers/aut
 jest.mock("next/navigation", () => ({ useRouter: () => jest.requireActual("@/tests/helpers/auth").router }));
 
 describe("UI-AUTH — sign-in state transitions", () => {
-    beforeEach(() => resetAuth());
+    it("shows expired query and fragment errors with recovery navigation in Strict Mode", async () => {
+        window.history.replaceState(null, "", "/login#error=access_denied&error_code=otp_expired&error_description=untrusted");
+        render(<StrictMode><LoginPage /></StrictMode>);
+        expect(await screen.findByRole("alert")).toHaveTextContent("expired");
+        expect(window.location.hash).toBe("");
+        expect(screen.getByRole("link", { name: "Forgot your password?" })).toHaveAttribute("href", "/forgot-password");
+        expect(screen.getByRole("link", { name: "Resend confirmation email" })).toHaveAttribute("href", "/resend-confirmation");
+    });
+
+    it("session service failure leaves sign-in usable", async () => {
+        supabase.auth.getSession.mockRejectedValue(new Error("offline"));
+        render(<LoginPage />);
+        expect(await screen.findByRole("alert")).toHaveTextContent("Unable to check");
+        expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    });
+    beforeEach(() => {
+        resetAuth();
+        window.history.replaceState(null, "", "/login");
+    });
 
     async function fillCredentials() {
         const user = userEvent.setup();

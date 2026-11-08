@@ -31,15 +31,11 @@ import {
 } from "lucide-react";
 
 import { ScoringService } from "@/domain/business/ScoringService";
-import {
-    VehicleSelection,
-    VehicleSelectionService,
-} from "@/domain/business/VehicleSelectionService";
+import type { VehicleSelection } from "@/domain/business/VehicleSelectionService";
 import { DuplicateLeadError, validateLeadContact, type LeadFieldErrors, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
 import DuplicateLeadNotice from "./DuplicateLeadNotice";
 import { Lead } from "@/domain/objects/Lead";
 import { getLeadOutcome, isTerminalLeadStage, leadOutcomeLabels, leadStateAfterStageChange, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
-import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 import { Vehicle } from "@/domain/objects/Vehicle";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
@@ -68,6 +64,7 @@ export interface LeadDetailNotificationViewModel {
 
 export interface LeadDetailViewModel {
     leadID: number;
+    version: number | null;
     firstName: string;
     lastName: string;
     phone: string;
@@ -266,6 +263,7 @@ function createVehicleReference(vehicleId: number | null) {
 function createLeadFromViewModel(viewModel: LeadDetailViewModel) {
     return new Lead({
         leadID: viewModel.leadID,
+        version: viewModel.version,
         firstName: viewModel.firstName,
         lastName: viewModel.lastName,
         phone: viewModel.phone,
@@ -381,10 +379,15 @@ export default function LeadDetailPanel({
     const [draftTaskDate, setDraftTaskDate] = useState("");
     const [draftTaskTime, setDraftTaskTime] = useState("");
     const scoringService = useMemo(() => new ScoringService(), []);
-    const vehicleSelectionService = useMemo(
-        () => new VehicleSelectionService(),
-        []
-    );
+    const pendingSave = useRef<{
+        fingerprint: string;
+        requestId: string;
+        lead: Lead;
+        interest: VehicleSelection;
+        tradeIn: VehicleSelection;
+        duplicateIds: number[];
+        priority: ReturnType<ScoringService["calculatePriority"]>;
+    } | null>(null);
 
     // refresh() preserves client state. Adopt the authoritative payload after
     // refreshing so contact metadata, score and tasks do not stay stale.
@@ -460,36 +463,20 @@ export default function LeadDetailPanel({
             const priority = scoringService.calculatePriority(leadToSave);
             leadToSave.updateScore(priority.score);
 
-            const error = duplicates.length
-                ? await leadRepository.updateLead(leadToSave, duplicates.map((match) => match.leadID))
-                : await leadRepository.updateLead(leadToSave);
-
-            if (error) {
-                setErrorMessage(error);
-                return;
+            const duplicateIds = duplicates.map((match) => match.leadID);
+            const fingerprint = JSON.stringify([normalizedDraftLead, draftVehicleInterest, draftTradeInVehicle, duplicateIds]);
+            if (pendingSave.current?.fingerprint !== fingerprint) {
+                pendingSave.current = {
+                    fingerprint, requestId: crypto.randomUUID(), lead: leadToSave,
+                    interest: { ...draftVehicleInterest }, tradeIn: { ...draftTradeInVehicle }, duplicateIds, priority,
+                };
             }
-
-            const vehicleError =
-                await vehicleSelectionService.saveLeadVehicleInterest(
-                    currentLead.leadID,
-                    draftVehicleInterest
-                );
-
-            if (vehicleError) {
-                setErrorMessage(vehicleError);
-                return;
-            }
-
-            const tradeInError =
-                await vehicleSelectionService.saveLeadTradeInVehicle(
-                    currentLead.leadID,
-                    draftTradeInVehicle
-                );
-
-            if (tradeInError) {
-                setErrorMessage(tradeInError);
-                return;
-            }
+            // Freeze all derived values as well as the ID. Dates/scores can depend
+            // on the clock, so reconstructing them would change a retry's payload.
+            const pending = pendingSave.current;
+            const saved = await leadRepository.saveLeadDetails(
+                pending.lead, pending.interest, pending.tradeIn, pending.requestId, pending.duplicateIds
+            );
 
             const vehicleDescription =
                 getVehicleDescription(draftVehicleInterest);
@@ -498,12 +485,15 @@ export default function LeadDetailPanel({
 
             const nextLead = {
                 ...normalizedDraftLead,
+                version: saved.version,
+                vehicleInterestId: saved.vehicleInterestId,
+                tradeInVehicleId: saved.tradeInVehicleId,
+                score: pending.priority.score,
+                priorityLevel: pending.priority.level,
+                priorityReasons: pending.priority.reasons,
                 phone: leadToSave.phone,
                 leadEmail: leadToSave.leadEmail,
                 budget: leadToSave.budget,
-                score: priority.score,
-                priorityLevel: priority.level,
-                priorityReasons: priority.reasons,
                 vehicleInterest: vehicleDescription,
                 vehicleInterestYear: draftVehicleInterest.year,
                 vehicleInterestMake: draftVehicleInterest.make,
@@ -521,6 +511,7 @@ export default function LeadDetailPanel({
             setDraftBudget(String(nextLead.budget));
             setDuplicates([]);
             setIsEditing(false);
+            pendingSave.current = null;
             router.refresh();
         } catch (error) {
             if (error instanceof DuplicateLeadError) setDuplicates(error.matches);

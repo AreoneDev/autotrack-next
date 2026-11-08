@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import { supabase } from "@/lib/supabase/client";
 import { AccountProvider } from "@/components/auth/AccountProvider";
+import { isPublicAuthPage } from "@/lib/auth/routes";
 
 type AuthGateProps = {
     children: ReactNode;
@@ -15,6 +16,7 @@ type AuthGateProps = {
 export default function AuthGate({ children }: AuthGateProps) {
     const pathname = usePathname();
     const router = useRouter();
+    const isPublic = isPublicAuthPage(pathname);
     const [isCheckingSession, setIsCheckingSession] = useState(true);
     const [sessionError, setSessionError] = useState("");
     const drawer = useRef<HTMLDialogElement>(null);
@@ -42,23 +44,23 @@ export default function AuthGate({ children }: AuthGateProps) {
             }
         }
 
-        if (pathname !== "/login") {
+        if (!isPublic) {
             void verifySession();
         }
 
         const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!isMounted) return;
             setIsCheckingSession(!session);
-            if (!session && pathname !== "/login") router.replace("/login");
+            if (!session && !isPublic) router.replace("/login");
         });
 
         return () => {
             isMounted = false;
             listener.subscription.unsubscribe();
         };
-    }, [pathname, router]);
+    }, [isPublic, router]);
 
-    if (pathname === "/login") {
+    if (isPublic) {
         return <>{children}</>;
     }
 
