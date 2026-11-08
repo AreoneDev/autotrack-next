@@ -4,21 +4,51 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # Rollout branch emits a real push-SHA check before changing production gates.
+    branches: [main, codex/selective-ci-release-gate]
+  merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Do not cancel main pushes: every production SHA needs its own completed gate.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  plan:
+    name: Select affected suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      checks: ${{ steps.plan.outputs.checks }}
+      e2e: ${{ steps.plan.outputs.e2e }}
+      supabase: ${{ steps.plan.outputs.supabase }}
+      browser: ${{ steps.plan.outputs.browser }}
+      dependencies: ${{ steps.plan.outputs.dependencies }}
+      recovery: ${{ steps.plan.outputs.recovery }}
+      tested_sha: ${{ steps.plan.outputs.tested_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify selection and gate failure semantics
+        run: node --test ci/ci.test.mjs
+      - name: Select tests from the event's actual Git range
+        id: plan
+        run: node ci/plan.mjs
+
   checks:
     name: Lint, test and build
+    needs: plan
+    if: needs.plan.outputs.checks == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
@@ -33,23 +63,46 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  e2e:
+    name: Browser journeys and accessibility
+    needs: plan
+    if: needs.plan.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
+      # Playwright builds production code against synthetic loopback fixtures.
       - name: Browser journeys and accessibility scans (all four projects)
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-reports
+          name: browser-journeys
           path: |
-            coverage/
             playwright-report/
             test-results/
           if-no-files-found: ignore
 
-  supabase-security:
+  supabase:
     name: Disposable Supabase integration and RLS
+    needs: plan
+    if: needs.plan.outputs.supabase == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -67,3 +120,87 @@ jobs:
           name: supabase-security-results
           path: test-results/supabase-results.json
           if-no-files-found: ignore
+
+  browser:
+    name: Security, performance and bounded load
+    needs: plan
+    if: needs.plan.outputs.browser == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:nfr
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nonfunctional-browser
+          path: nfr-reports/
+          retention-days: 14
+
+  dependencies:
+    name: Dependency vulnerability gate
+    needs: plan
+    if: needs.plan.outputs.dependencies == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:dependencies
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit
+          path: nfr-reports/
+          retention-days: 14
+
+  recovery:
+    name: Isolated PostgreSQL backup and recovery
+    needs: plan
+    if: needs.plan.outputs.recovery == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: docker pull postgres:17
+      - run: npm run test:recovery
+      - run: npm run test:data-recovery
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovery-evidence
+          path: nfr-reports/
+          retention-days: 14
+
+  gate:
+    # Separate names prevent PR merge-ref results or manual runs from satisfying
+    # Vercel's requirement for CI on the exact main push SHA.
+    name: ${{ github.event_name == 'push' && 'Production CI' || (github.event_name == 'pull_request' || github.event_name == 'merge_group') && 'PR CI' || 'Full regression CI' }}
+    if: ${{ always() }}
+    needs: [plan, checks, e2e, supabase, browser, dependencies, recovery]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Require success for every selected suite on this commit
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node ci/gate.mjs

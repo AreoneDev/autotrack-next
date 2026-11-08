@@ -79,11 +79,7 @@ export class ScoringService {
             return null;
         }
 
-        const pivotDate =
-            lead.lastInteractionDate !== null &&
-            lead.lastInteractionBy === "LEAD"
-                ? lead.lastInteractionDate
-                : lead.createdAt;
+        const pivotDate = lead.lastInteractionDate ?? lead.createdAt;
         const daysFromPivot = this.getDaysDiff(
             this.resetTime(pivotDate),
             this.resetTime(targetDate)
@@ -137,11 +133,7 @@ export class ScoringService {
             return "Gratitude: Thank You & Info Swap";
         }
 
-        const pivotDate =
-            lead.lastInteractionDate !== null &&
-            lead.lastInteractionBy === "LEAD"
-                ? lead.lastInteractionDate
-                : lead.createdAt;
+        const pivotDate = lead.lastInteractionDate ?? lead.createdAt;
 
         const daysFromPivot = this.getDaysDiff(
             this.resetTime(pivotDate),
@@ -186,8 +178,8 @@ export class ScoringService {
 
         const gratitudeTitle = "Gratitude: Thank You & Info Swap";
 
-        if (!this.containsTask(timeline, gratitudeTitle)) {
-            const creationDay = this.resetTime(lead.createdAt);
+        const creationDay = this.resetTime(lead.createdAt);
+        if (!this.containsTask(timeline, gratitudeTitle, creationDay)) {
 
             if (creationDay <= today) {
                 const task = new Task(lead, gratitudeTitle, creationDay);
@@ -196,12 +188,17 @@ export class ScoringService {
         }
 
         const urgentTitle = "URGENT: Lead replied. Respond within 48h!";
+        const replyDay = this.resetTime(lead.lastInteractionDate ?? lead.createdAt);
 
         if (
             lead.lastInteractionBy === "LEAD" &&
-            !this.containsTask(timeline, urgentTitle)
+            replyDay <= today &&
+            // Older versions assigned this task to the day the agenda was
+            // opened. Preserve that task for the current reply cycle too.
+            !timeline.some((task) => task.getTitle() === urgentTitle
+                && this.resetTime(task.getDate()) >= replyDay)
         ) {
-            const urgentTask = new Task(lead, urgentTitle, today);
+            const urgentTask = new Task(lead, urgentTitle, replyDay);
 
             const daysFromPivot = this.getDaysDiff(
                 this.resetTime(lead.lastInteractionDate ?? lead.createdAt),
@@ -212,17 +209,13 @@ export class ScoringService {
             timeline.push(urgentTask);
         }
 
-        const pivotDate =
-            lead.lastInteractionDate !== null &&
-            lead.lastInteractionBy === "LEAD"
-                ? lead.lastInteractionDate
-                : lead.createdAt;
+        const pivotDate = lead.lastInteractionDate ?? lead.createdAt;
 
         for (const milestone of this.silentMilestones) {
             const title = this.getMissionNameByDay(milestone);
 
-            if (!this.containsTask(timeline, title)) {
-                const milestoneDate = this.addDays(pivotDate, milestone);
+            const milestoneDate = this.addDays(pivotDate, milestone);
+            if (!this.containsTask(timeline, title, milestoneDate)) {
 
                 if (milestoneDate <= today) {
                     const task = new Task(lead, title, milestoneDate);
@@ -525,8 +518,9 @@ export class ScoringService {
         }
     }
 
-    private containsTask(taskList: Task[], title: string): boolean {
-        return taskList.some((task) => task.getTitle() === title);
+    private containsTask(taskList: Task[], title: string, date: Date): boolean {
+        return taskList.some((task) => task.getTitle() === title
+            && this.formatDate(task.getDate()) === this.formatDate(date));
     }
 
     private addDays(date: Date, days: number): Date {

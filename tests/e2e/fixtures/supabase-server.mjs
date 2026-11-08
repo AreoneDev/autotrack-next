@@ -29,7 +29,7 @@ function reset(seed = {}) {
     recoveryLink = null;
     for (const [table, rows] of Object.entries(seed)) {
         if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
-        tables[table] = rows;
+        tables[table] = table === "leads" ? rows.map((row) => ({ version: 1, ...row })) : rows;
         for (const row of rows) {
             const idColumn = { leads: "lead_id", tasks: "task_id", notifications: "notification_id" }[table];
             const id = row[idColumn];
@@ -139,6 +139,31 @@ const server = createServer(async (request, response) => {
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
         if (url.pathname === "/auth/v1/otp" && request.method === "POST") return send(200, {});
         if (url.pathname === "/auth/v1/logout" && request.method === "POST") return send(200, {});
+        // Journey double only. Real transaction/RLS assertions live in
+        // tests/supabase/communication-checks.sql, executed by test:supabase.
+        if (url.pathname === "/rest/v1/rpc/autotrack_log_communication" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const lead = tables.leads.find((row) => row.lead_id === body.p_lead_id);
+            if (!lead) return send(400, { message: "Lead not found." });
+            const existing = tables.notifications.find((row) => row.sync_id === body.p_operation_id);
+            if (existing) return send(200, { lead, notification: existing });
+            if (lead.version !== body.p_expected_version) return send(409, { code: "40001", message: "Lead changed. Retry." });
+            if (failure?.table === "notifications" && failure.method === "POST") {
+                failure = null;
+                return send(503, { message: "Synthetic write failure" });
+            }
+            const prefix = { call: "You called ", email: "You sent an email to ", message: "You sent a message to " }[body.p_channel];
+            if (!prefix) return send(400, { message: "Invalid communication." });
+            const notification = { notification_id: nextId++, lead_id: lead.lead_id,
+                title: prefix + [lead.first_name, lead.last_name].filter(Boolean).join(" "),
+                date: body.p_occurred_at, sync_id: body.p_operation_id };
+            tables.notifications.push(notification);
+            if (!lead.last_interaction_date || new Date(body.p_occurred_at) >= new Date(lead.last_interaction_date)) {
+                Object.assign(lead, { last_interaction_date: body.p_occurred_at, last_interaction_by: "USER",
+                    score: body.p_score, version: lead.version + 1 });
+            }
+            return send(200, { lead, notification });
+        }
         // Browser contract double only. Database trigger/RLS/concurrency semantics
         // are exercised against PostgreSQL by tests/lead-validation/postgres.mjs.
         if (url.pathname === "/rest/v1/rpc/save_lead_validated" && request.method === "POST") {
@@ -226,7 +251,10 @@ const server = createServer(async (request, response) => {
             tables[table].push(...inserted);
             return send(201, request.headers.accept?.includes("vnd.pgrst.object+json") ? inserted[0] : inserted);
         }
-        if (request.method === "PATCH") { selected.forEach((row) => Object.assign(row, body)); return send(200, selected); }
+        if (request.method === "PATCH") {
+            selected.forEach((row) => Object.assign(row, body, table === "leads" ? { version: (row.version ?? 1) + 1 } : {}));
+            return send(200, selected);
+        }
         if (request.method === "DELETE") { tables[table] = tables[table].filter((row) => !selected.includes(row)); return send(200, selected); }
         return send(405, { message: "Unsupported test method" });
     } catch (error) {
