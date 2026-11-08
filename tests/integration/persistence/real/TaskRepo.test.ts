@@ -19,7 +19,7 @@ describe("DB-TASK — task repository adapter integration", () => {
     it("DB-TASK-02: a later page failure does not return misleading partial data", async () => {
         const rows = Array.from({ length: 1000 }, (_, i) => row({ task_id: i, title: `Task ${i}` }));
         const db = scriptedClient([{ data: rows }, { error: { message: "Disconnected" } }]);
-        expect(await new TaskRepo(db.client).getTasksByLeadId(7)).toEqual([]);
+        await expect(new TaskRepo(db.client).getTasksByLeadId(7)).rejects.toThrow("Unable to load tasks");
         db.queries.forEach((query) => expect(query.eq).toHaveBeenCalledWith("lead_id", 7));
     });
 

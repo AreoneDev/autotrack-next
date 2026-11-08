@@ -55,7 +55,7 @@ describe("complete collection reads", () => {
         const db = scriptedClient([{ data: kind === "notifications" ? notifications.slice(0, 2) : leads.slice(0, 2) }, { error: { message: "Page unavailable" } }]);
         const promise = kind === "notifications" ? new NotificationRepo(db.client).getAllNotifications()
             : kind === "followups" ? new LeadRepo(db.client).getLeadsByFollowUpDate(new Date()) : new LeadRepo(db.client).getAllLeads();
-        await expect(promise).rejects.toThrow("Page unavailable");
+        await expect(promise).rejects.toThrow(kind === "notifications" ? "Unable to load notifications" : "Unable to load leads");
     });
 
     it("preserves later-page leads and activity in Analytics, Agenda and Dashboard", async () => {
@@ -81,7 +81,7 @@ describe("complete collection reads", () => {
 
     it("rejects a missing response instead of returning partial data", async () => {
         const db = scriptedClient([{ data: leads.slice(0, 1) }, { data: null }]);
-        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Missing data");
+        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Unable to load leads");
     });
 
     it("pages associations within a batch when the server cap is lower than 200", async () => {

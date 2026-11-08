@@ -59,10 +59,15 @@ describe.each(["interest", "trade-in"] as const)("DB-VEH — %s service/reposito
         expect(db.queries[1].eq).toHaveBeenCalledWith("vehicle_id", 42);
     });
 
-    it.each([null, { message: "Unavailable" }])("DB-VEH-06: missing association/error %j is safe", async (error) => {
-        const { db, load } = setup([{ error }]);
+    it("DB-VEH-06: a genuinely missing association returns null", async () => {
+        const { db, load } = setup([{}]);
         expect(await load(7)).toBeNull();
         expect(db.from).toHaveBeenCalledTimes(1);
+    });
+
+    it("DB-VEH-09: an association read failure is not a missing vehicle", async () => {
+        const { load } = setup([{ error: { message: "Unavailable" } }]);
+        await expect(load(7)).rejects.toThrow("Unable to load lead vehicle details");
     });
 
     it("DB-VEH-07: deleted catalog vehicles hydrate as null", async () => {

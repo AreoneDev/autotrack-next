@@ -53,7 +53,7 @@ describe("PERF-DB — bounded association hydration", () => {
     it("PERF-DB-03: failed relationship reads reject without mutating leads", async () => {
         const db = scriptedClient([{ error: { message: "Denied" } }, { data: [] }]);
         const lead = makeLead();
-        await expect(hydrateLeadTableData([lead], db.client)).rejects.toThrow("Denied");
+        await expect(hydrateLeadTableData([lead], db.client)).rejects.toThrow("Unable to load lead vehicle details");
         expect(lead.vehicleInterest).toBeNull();
     });
 });

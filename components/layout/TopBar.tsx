@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import ReadError from "@/components/ui/read-error";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -92,6 +93,8 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
     >([]);
     const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
+    const [notificationsError, setNotificationsError] = useState(false);
+    const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0);
 
     const date = currentTime
         ? currentTime.toLocaleDateString("en-CA", {
@@ -156,8 +159,12 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
 
     useEffect(() => {
         let active = true;
+        let inFlight = false;
 
         async function loadTopbarNotifications() {
+            if (inFlight) return;
+            inFlight = true;
+            setNotificationsLoading(true);
             try {
                 const leadRepo = new LeadRepo();
                 const notificationRepo = new NotificationRepo();
@@ -180,7 +187,11 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
                         limit: 5,
                     })
                 );
+                setNotificationsError(false);
+            } catch {
+                if (active) setNotificationsError(true);
             } finally {
+                inFlight = false;
                 if (active) {
                     setNotificationsLoading(false);
                 }
@@ -194,7 +205,7 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
             active = false;
             clearInterval(refreshTimer);
         };
-    }, [pathname]);
+    }, [pathname, notificationsRefreshKey]);
 
     function markNotificationRead(activityId: string) {
         setReadNotificationIds((currentReadIds) => {
@@ -215,7 +226,7 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
         });
     }
 
-    const unreadCount = topbarNotifications.filter(
+    const unreadCount = notificationsError || notificationsLoading ? 0 : topbarNotifications.filter(
         (activity) =>
             activity.unread && !readNotificationIds.includes(activity.id)
     ).length;
@@ -249,7 +260,7 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
                         ref={notificationsButton}
                         aria-expanded={notificationsOpen}
                         aria-controls={notificationsOpen ? "notifications-panel" : undefined}
-                        aria-label={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+                        aria-label={`Open notifications${notificationsError ? ", currently unavailable" : unreadCount ? `, ${unreadCount} unread` : ""}`}
                     >
                         <Bell size={20} />
                         {unreadCount > 0 ? (
@@ -278,20 +289,23 @@ export default function TopBar({ onOpenNavigation }: { onOpenNavigation?: () => 
                             </div>
 
                             <div className="max-h-96 overflow-y-auto p-2">
-                                {notificationsLoading ? (
+                                {notificationsError ? (
+                                    <ReadError resource="notifications" pending={notificationsLoading} onRetry={() => setNotificationsRefreshKey((key) => key + 1)} />
+                                ) : notificationsLoading ? (
                                     <p className="px-3 py-4 text-sm text-slate-500">
                                         Loading notifications...
                                     </p>
                                 ) : null}
 
                                 {!notificationsLoading &&
+                                !notificationsError &&
                                 topbarNotifications.length === 0 ? (
                                     <p className="px-3 py-4 text-sm text-slate-500">
                                         No notifications.
                                     </p>
                                 ) : null}
 
-                                {topbarNotifications.map((activity) => {
+                                {!notificationsLoading && !notificationsError && topbarNotifications.map((activity) => {
                                     const Icon = getActivityIcon(activity.type);
                                     const isUnread =
                                         activity.unread &&

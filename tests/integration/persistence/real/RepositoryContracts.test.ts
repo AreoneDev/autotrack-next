@@ -139,13 +139,13 @@ describe("DB — repository mapping and failure contracts", () => {
         if (method === "searchTrims") expect(db.queries[0].ilike).toHaveBeenCalledWith("model", "RAV4");
     });
 
-    it("DB-ERR-01: collection failures reject; other read contracts are unchanged", async () => {
+    it("DB-ERR-01: failed reads reject instead of inventing empty or missing records", async () => {
         const db = scriptedClient(Array.from({ length: 6 }, () => ({ error: { message: "Unavailable" } })));
-        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Unavailable");
-        expect(await new LeadRepo(db.client).getLeadById(1)).toBeNull();
-        await expect(new NotificationRepo(db.client).getAllNotifications()).rejects.toThrow("Unavailable");
-        expect(await new NotificationRepo(db.client).getNotificationById(1)).toBeNull();
+        await expect(new LeadRepo(db.client).getAllLeads()).rejects.toThrow("Unable to load leads");
+        await expect(new LeadRepo(db.client).getLeadById(1)).rejects.toThrow("Unable to load leads");
+        await expect(new NotificationRepo(db.client).getAllNotifications()).rejects.toThrow("Unable to load notifications");
+        await expect(new NotificationRepo(db.client).getNotificationById(1)).rejects.toThrow("Unable to load notifications");
         expect(await new VehicleRepo(db.client).getAllVehicles()).toEqual([]);
-        expect(await new VehicleRepo(db.client).getVehicleById(1)).toBeNull();
+        await expect(new VehicleRepo(db.client).getVehicleById(1)).rejects.toThrow("Unable to load lead vehicle details");
     });
 });

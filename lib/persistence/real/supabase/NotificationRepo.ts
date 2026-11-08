@@ -1,3 +1,4 @@
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
 import { Notification } from "@/domain/objects/Notification";
@@ -59,12 +60,17 @@ export class NotificationRepo {
     constructor(private readonly client: SupabaseClient = supabase) {}
 
     async getAllNotifications(): Promise<Notification[]> {
-        const data = await readAllPages<NotificationRow>((from, to) => this.client
-            .from(TABLE_NAME)
-            .select("*")
-            .order("date", { ascending: false })
-            .order("notification_id", { ascending: false })
-            .range(from, to));
+        let data: NotificationRow[];
+        try {
+            data = await readAllPages<NotificationRow>((from, to) => this.client
+                .from(TABLE_NAME)
+                .select("*")
+                .order("date", { ascending: false })
+                .order("notification_id", { ascending: false })
+                .range(from, to));
+        } catch (error) {
+            throw new RepositoryReadError("notifications", error);
+        }
 
         return data.map((row) => mapRowToNotification(row as NotificationRow));
     }
@@ -76,7 +82,11 @@ export class NotificationRepo {
             .eq("notification_id", id)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("notifications", error);
+        }
+
+        if (!data) {
             return null;
         }
 
@@ -84,13 +94,18 @@ export class NotificationRepo {
     }
 
     async getNotificationsByLeadId(leadId: number): Promise<Notification[]> {
-        const data = await readAllPages<NotificationRow>((from, to) => this.client
-            .from(TABLE_NAME)
-            .select("*")
-            .eq("lead_id", leadId)
-            .order("date", { ascending: false })
-            .order("notification_id", { ascending: false })
-            .range(from, to));
+        let data: NotificationRow[];
+        try {
+            data = await readAllPages<NotificationRow>((from, to) => this.client
+                .from(TABLE_NAME)
+                .select("*")
+                .eq("lead_id", leadId)
+                .order("date", { ascending: false })
+                .order("notification_id", { ascending: false })
+                .range(from, to));
+        } catch (error) {
+            throw new RepositoryReadError("notifications", error);
+        }
 
         return data.map((row) => mapRowToNotification(row as NotificationRow));
     }

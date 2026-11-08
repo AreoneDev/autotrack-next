@@ -1,4 +1,5 @@
 import { DuplicateLeadError, validateLeadContact, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
+import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
 import { leadStateForWrite } from "@/domain/objects/LeadOutcome";
@@ -158,11 +159,16 @@ export class LeadRepo {
     }
 
     async getAllLeads(): Promise<Lead[]> {
-        const data = await readAllPages<LeadRow>((from, to) => this.client
-            .from(TABLE_NAME)
-            .select("*")
-            .order("lead_id", { ascending: true })
-            .range(from, to));
+        let data: LeadRow[];
+        try {
+            data = await readAllPages<LeadRow>((from, to) => this.client
+                .from(TABLE_NAME)
+                .select("*")
+                .order("lead_id", { ascending: true })
+                .range(from, to));
+        } catch (error) {
+            throw new RepositoryReadError("leads", error);
+        }
 
         return data.map((row) => mapRowToLead(row as LeadRow));
     }
@@ -174,7 +180,11 @@ export class LeadRepo {
             .eq("lead_id", id)
             .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+            throw new RepositoryReadError("leads", error);
+        }
+
+        if (!data) {
             return null;
         }
 
@@ -207,7 +217,7 @@ export class LeadRepo {
             .limit(limit);
 
         if (error || !data) {
-            return [];
+            throw new RepositoryReadError("leads", error);
         }
 
         return data.map((row) => mapRowToLead(row as LeadRow));
@@ -220,15 +230,20 @@ export class LeadRepo {
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 
-        const data = await readAllPages<LeadRow>((from, to) => this.client
-            .from(TABLE_NAME)
-            .select("*")
-            .not("follow_up_date", "is", null)
-            .gte("follow_up_date", startOfDay.toISOString())
-            .lt("follow_up_date", endOfDay.toISOString())
-            .order("follow_up_date", { ascending: true })
-            .order("lead_id", { ascending: true })
-            .range(from, to));
+        let data: LeadRow[];
+        try {
+            data = await readAllPages<LeadRow>((from, to) => this.client
+                .from(TABLE_NAME)
+                .select("*")
+                .not("follow_up_date", "is", null)
+                .gte("follow_up_date", startOfDay.toISOString())
+                .lt("follow_up_date", endOfDay.toISOString())
+                .order("follow_up_date", { ascending: true })
+                .order("lead_id", { ascending: true })
+                .range(from, to));
+        } catch (error) {
+            throw new RepositoryReadError("leads", error);
+        }
 
         return data.map((row) => mapRowToLead(row as LeadRow));
     }
