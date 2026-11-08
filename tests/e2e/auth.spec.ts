@@ -21,18 +21,49 @@ test("E2E-AUTH-02: login, authenticated navigation, and logout", async ({ page }
     await page.getByLabel("Password", { exact: true }).fill("test-password-123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL("/dashboard");
-    const accountEmail = page.getByText("ada@example.test", { exact: true });
-    if ((page.viewportSize()?.width ?? 0) >= 640) {
-        await expect(accountEmail).toBeVisible();
+    if ((page.viewportSize()?.width ?? 0) >= 768) {
+        await expect(page.locator("aside:visible").getByText("ada@example.test", { exact: true })).toBeVisible();
     } else {
-        await expect(accountEmail).toBeHidden();
+        await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
     }
     await page.goto("/leads");
     await expect(page.getByRole("heading", { name: "Lead Filters" })).toBeVisible();
+    if ((page.viewportSize()?.width ?? 0) < 768) {
+        const openNavigation = page.getByRole("button", { name: "Open navigation" });
+        await openNavigation.click();
+        await expect(page.getByRole("dialog", { name: "Navigation" })).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog", { name: "Navigation" })).toHaveCount(0);
+        await expect(openNavigation).toBeFocused();
+        await openNavigation.click();
+    } else await page.getByRole("button", { name: /ada@example.test/ }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
     await page.goto("/leads");
     await expect(page).toHaveURL("/login");
+});
+
+test("account settings persists a display name and guards unsaved edits", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("ada@example.test");
+    await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page).toHaveURL("/dashboard");
+    if ((page.viewportSize()?.width ?? 0) < 768) await page.getByRole("button", { name: "Open navigation" }).click();
+    else await page.getByRole("button", { name: /ada@example.test/ }).click();
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page).toHaveURL("/settings");
+    const input = page.getByLabel("Display name");
+    await input.fill("Ada Lovelace");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(input).toHaveValue("Ada Lovelace");
+    await input.fill("Unsaved edit");
+    page.once("dialog", dialog => dialog.dismiss());
+    await page.getByRole("link", { name: "Back to Dashboard" }).click();
+    await expect(page).toHaveURL("/settings");
+    await expect(input).toHaveValue("Unsaved edit");
 });
 
 test("E2E-AUTH-03: invalid credentials show an error and permit retry", async ({ page }) => {

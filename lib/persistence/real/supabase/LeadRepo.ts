@@ -1,3 +1,4 @@
+import { DuplicateLeadError, validateLeadContact, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
 import { RepositoryReadError } from "@/lib/persistence/RepositoryReadError";
 import { readAllPages } from "./readAllPages";
 import { Lead } from "@/domain/objects/Lead";
@@ -5,7 +6,7 @@ import { leadStateForWrite } from "@/domain/objects/LeadOutcome";
 import { supabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type LeadRow = {
+export type LeadRow = {
     lead_id: number;
     first_name: string | null;
     last_name: string | null;
@@ -42,7 +43,7 @@ function toDate(value: string | null, fallback = new Date()): Date {
     return new Date(value);
 }
 
-function mapRowToLead(row: LeadRow): Lead {
+export function mapRowToLead(row: LeadRow): Lead {
     return new Lead({
         leadID: row.lead_id,
         firstName: row.first_name ?? "",
@@ -195,37 +196,46 @@ export class LeadRepo {
         return data.map((row) => mapRowToLead(row as LeadRow));
     }
 
-    async insertLead(lead: Lead): Promise<string | null> {
-        const { data, error } = await this.client
-            .from(TABLE_NAME)
-            .insert(mapLeadToRow(lead))
-            .select("*")
-            .single();
+    private async saveLead(lead: Lead, confirmedDuplicateIds: number[], previous?: Lead): Promise<string | null> {
+        const validation = validateLeadContact(lead, previous);
+        const message = Object.values(validation.errors)[0];
+        if (message) return message;
 
+        const { data, error } = await this.client.rpc("save_lead_validated", {
+            p_lead: { ...mapLeadToRow(lead), phone: validation.values.phone,
+                lead_email: validation.values.leadEmail, budget: validation.values.budget },
+            p_duplicate_ids: confirmedDuplicateIds,
+        });
         if (error) {
+            if (error.message === "AUTOTRACK_DUPLICATE_LEAD") {
+                let matches: DuplicateLeadMatch[] = [];
+                try {
+                    const parsed: unknown = JSON.parse(error.details);
+                    if (Array.isArray(parsed)) matches = parsed.filter((item): item is DuplicateLeadMatch =>
+                        typeof item?.leadID === "number" && typeof item?.name === "string"
+                        && typeof item?.email === "boolean" && typeof item?.phone === "boolean");
+                } catch { /* Preserve an actionable failure if the server response is malformed. */ }
+                if (matches.length) throw new DuplicateLeadError(matches);
+                return "Possible duplicates found. Please reload and review before saving.";
+            }
             return error.message;
         }
-
-        if (data) {
-            lead.leadID = (data as LeadRow).lead_id;
-        }
-
+        if (!data || typeof data.lead_id !== "number") return "Lead was not saved. Please retry.";
+        lead.leadID = data.lead_id;
+        lead.phone = data.phone ?? "";
+        lead.leadEmail = data.lead_email ?? "";
+        lead.budget = data.budget ?? 0;
         return null;
     }
 
-    async updateLead(lead: Lead): Promise<string | null> {
+    async insertLead(lead: Lead, confirmedDuplicateIds: number[] = []): Promise<string | null> {
+        return this.saveLead(lead, confirmedDuplicateIds);
+    }
+
+    async updateLead(lead: Lead, confirmedDuplicateIds: number[] = []): Promise<string | null> {
         const existingLead = await this.getLeadById(lead.leadID);
-
-        if (!existingLead) {
-            return "Lead not found.";
-        }
-
-        const { error } = await this.client
-            .from(TABLE_NAME)
-            .update(mapLeadToRow(lead))
-            .eq("lead_id", lead.leadID);
-
-        return error?.message ?? null;
+        if (!existingLead) return "Lead not found.";
+        return this.saveLead(lead, confirmedDuplicateIds, existingLead);
     }
 
     async deleteLead(id: number): Promise<string | null> {

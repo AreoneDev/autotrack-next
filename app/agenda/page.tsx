@@ -85,6 +85,7 @@ export default function AgendaPage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [agendaActivities, setAgendaActivities] = useState<AgendaActivity[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hasLoaded, setHasLoaded] = useState(false);
     const [readError, setReadError] = useState(false);
     const [currentTimeMs, setCurrentTimeMs] = useState(0);
     const [todayDateString, setTodayDateString] = useState("");
@@ -164,6 +165,7 @@ export default function AgendaPage() {
                         getPastUnfinishedTaskCounts(allTasks, formatDateInput(now))
                     );
                     setReadError(false);
+                    setHasLoaded(true);
                 }
             } catch {
                 if (active) setReadError(true);
@@ -591,7 +593,7 @@ export default function AgendaPage() {
 
             {readError ? (
                 <ReadError resource="agenda" pending={loading} onRetry={() => setRefreshKey((key) => key + 1)} />
-            ) : loading ? (
+            ) : loading && !hasLoaded ? (
                 <p role="status" className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">Loading agenda...</p>
             ) : (
                 <>
@@ -599,7 +601,7 @@ export default function AgendaPage() {
                         selectedDate={selectedDate}
                         onSelectDate={selectAgendaDate}
                         unfinishedTaskCount={
-                            getUnfinishedTaskCount(agendaActivities)
+                            loading ? 0 : getUnfinishedTaskCount(agendaActivities)
                         }
                         pastUnfinishedTaskCounts={pastUnfinishedTaskCounts}
                         todayDateString={todayDateString}

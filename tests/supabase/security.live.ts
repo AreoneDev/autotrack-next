@@ -249,6 +249,24 @@ describe("Real repository and database integration", () => {
         expect(await repo.getTradeInVehicleByLeadId(lead.lead_id)).toBeNull();
     });
 
+    it("CONTACT-LIVE-01 concurrent retries persist one notification and one lead revision", async () => {
+        const lead = await ok(a.db.from("leads").insert({ first_name: "Concurrent contact", stage: "CONTACTED" }).select().single());
+        const operation = {
+            p_lead_id: lead.lead_id, p_operation_id: randomUUID(), p_channel: "call",
+            p_occurred_at: new Date().toISOString(), p_expected_version: lead.version, p_score: 35,
+        };
+        const replies = await Promise.all([
+            a.db.rpc("autotrack_log_communication", operation),
+            a.db.rpc("autotrack_log_communication", operation),
+        ]);
+        for (const reply of replies) expect(reply.error).toBeNull();
+        expect(replies[0].data.notification.notification_id).toBe(replies[1].data.notification.notification_id);
+        expect(await ok(a.db.from("notifications").select().eq("sync_id", operation.p_operation_id))).toHaveLength(1);
+        expect(await ok(a.db.from("leads").select().eq("lead_id", lead.lead_id).single())).toMatchObject({
+            version: Number(lead.version) + 1, last_interaction_by: "USER", score: 35,
+        });
+    });
+
     it("DB-LIVE-04 batched FK hydration preserves per-lead trims and respects real relationship RLS", async () => {
         const rows = await ok(a.db.from("leads").insert([
             { first_name: "BatchOne" }, { first_name: "BatchTwo" },

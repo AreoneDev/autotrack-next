@@ -17,6 +17,8 @@ import {
 import Autocomplete from "@/components/ui/Autocomplete";
 import { Plus, X } from "lucide-react";
 
+import { DuplicateLeadError, validateLeadContact, type LeadFieldErrors, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
+import DuplicateLeadNotice from "./DuplicateLeadNotice";
 import { Lead } from "@/domain/objects/Lead";
 import { ScoringService } from "@/domain/business/ScoringService";
 import { getLeadOutcome, isTerminalLeadStage, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
@@ -109,6 +111,9 @@ export default function LeadTable({ leads }: LeadTableProps) {
     >(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [creatingLead, setCreatingLead] = useState(false);
+    const createInFlight = useRef(false);
+    const [fieldErrors, setFieldErrors] = useState<LeadFieldErrors>({});
+    const [duplicates, setDuplicates] = useState<DuplicateLeadMatch[]>([]);
     const [createError, setCreateError] = useState<string | null>(null);
     const [fabPosition, setFabPosition] = useState<{
         x: number;
@@ -134,53 +139,70 @@ export default function LeadTable({ leads }: LeadTableProps) {
             [field]: value,
         }));
         setCreateError(null);
+        setFieldErrors({});
+        setDuplicates([]);
     }
 
     async function handleCreateLead(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (createInFlight.current) return;
+        const validation = validateLeadContact(newLead);
+        setFieldErrors(validation.errors);
+        if (Object.keys(validation.errors).length) return;
 
         if (!newLead.firstName.trim() && !newLead.lastName.trim()) {
             setCreateError("Lead must have at least a first name or last name.");
             return;
         }
 
+        createInFlight.current = true;
         setCreatingLead(true);
         setCreateError(null);
 
-        const lead = new Lead({
-            firstName: newLead.firstName,
-            lastName: newLead.lastName,
-            phone: newLead.phone,
-            leadEmail: newLead.leadEmail,
-            ...leadStateForWrite({ stage: newLead.stage, status: true }),
-            budget: Number(newLead.budget) || 0,
-            followUpDate: new Date(`${newLead.followUpDate}T09:00:00`),
-            notes: newLead.notes,
-            createdAt: new Date(),
-        });
+        try {
+            const lead = new Lead({
+                firstName: newLead.firstName,
+                lastName: newLead.lastName,
+                phone: validation.values.phone,
+                leadEmail: validation.values.leadEmail,
+                ...leadStateForWrite({ stage: newLead.stage, status: true }),
+                budget: validation.values.budget,
+                followUpDate: new Date(`${newLead.followUpDate}T09:00:00`),
+                notes: newLead.notes,
+                createdAt: new Date(),
+            });
 
-        const leadRepository = new LeadRepo();
-        const error = await leadRepository.insertLead(lead);
+            const leadRepository = new LeadRepo();
+            const error = duplicates.length
+                ? await leadRepository.insertLead(lead, duplicates.map((match) => match.leadID))
+                : await leadRepository.insertLead(lead);
 
-        setCreatingLead(false);
+            if (error) {
+                setCreateError(error);
+                return;
+            }
 
-        if (error) {
-            setCreateError(error);
-            return;
+            setLeadList((currentLeads) => [...currentLeads, lead]);
+            setNewLead({
+                firstName: "",
+                lastName: "",
+                phone: "",
+                leadEmail: "",
+                stage: "NEW",
+                budget: "",
+                followUpDate: localDateInput(),
+                notes: "",
+            });
+            setDuplicates([]);
+            setFieldErrors({});
+            setCreateOpen(false);
+        } catch (error) {
+            if (error instanceof DuplicateLeadError) setDuplicates(error.matches);
+            else setCreateError(error instanceof Error ? error.message : "Failed to create lead. Please retry.");
+        } finally {
+            createInFlight.current = false;
+            setCreatingLead(false);
         }
-
-        setLeadList((currentLeads) => [...currentLeads, lead]);
-        setNewLead({
-            firstName: "",
-            lastName: "",
-            phone: "",
-            leadEmail: "",
-            stage: "NEW",
-            budget: "",
-            followUpDate: localDateInput(),
-            notes: "",
-        });
-        setCreateOpen(false);
     }
 
     const handleDeleteLead = async (leadId: number) => {
@@ -782,7 +804,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
             </Button>
 
             {createOpen ? (
-                <Modal labelledBy="create-lead-title" onClose={() => setCreateOpen(false)} className="w-full max-w-2xl">
+                <Modal labelledBy="create-lead-title" onClose={() => { if (!creatingLead) setCreateOpen(false); }} className="w-full max-w-2xl">
                         <div className="mb-5 flex items-center justify-between">
                             <div>
                                 <h2 id="create-lead-title" className="text-xl font-bold text-gray-900">
@@ -797,12 +819,14 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 onClick={() => setCreateOpen(false)}
                                 className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                                 aria-label="Close create lead"
+                                disabled={creatingLead}
                             >
                                 <X size={18} />
                             </Button>
                         </div>
 
-                        <form onSubmit={handleCreateLead} className="space-y-4">
+                        <form noValidate onSubmit={handleCreateLead} className="space-y-4">
+                            <fieldset disabled={creatingLead} className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <label className="text-sm font-medium text-gray-700">
                                     First Name
@@ -829,24 +853,33 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <label className="text-sm font-medium text-gray-700">
                                     Phone
                                     <Input
+                                        aria-label="Phone"
+                                        aria-invalid={Boolean(fieldErrors.phone)}
+                                        aria-describedby={fieldErrors.phone ? "create-phone-error" : undefined}
+                                        type="tel"
                                         value={newLead.phone}
                                         onChange={(event) =>
                                             updateNewLead("phone", event.target.value)
                                         }
                                         className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
                                     />
+                                    {fieldErrors.phone ? <span id="create-phone-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.phone}</span> : null}
                                 </label>
 
                                 <label className="text-sm font-medium text-gray-700">
                                     Email
                                     <Input
                                         type="email"
+                                        aria-label="Email"
+                                        aria-invalid={Boolean(fieldErrors.leadEmail)}
+                                        aria-describedby={fieldErrors.leadEmail ? "create-leadEmail-error" : undefined}
                                         value={newLead.leadEmail}
                                         onChange={(event) =>
                                             updateNewLead("leadEmail", event.target.value)
                                         }
                                         className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
                                     />
+                                    {fieldErrors.leadEmail ? <span id="create-leadEmail-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.leadEmail}</span> : null}
                                 </label>
 
                                 <label className="text-sm font-medium text-gray-700">
@@ -872,13 +905,18 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <label className="text-sm font-medium text-gray-700">
                                     Budget
                                     <Input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
+                                        aria-label="Budget"
+                                        aria-invalid={Boolean(fieldErrors.budget)}
+                                        aria-describedby={fieldErrors.budget ? "create-budget-error" : undefined}
                                         value={newLead.budget}
                                         onChange={(event) =>
                                             updateNewLead("budget", event.target.value)
                                         }
                                         className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
                                     />
+                                    {fieldErrors.budget ? <span id="create-budget-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.budget}</span> : null}
                                 </label>
 
                                 <label className="text-sm font-medium text-gray-700">
@@ -909,6 +947,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 />
                             </label>
 
+                            <DuplicateLeadNotice matches={duplicates} />
                             {createError ? (
                                 <p role="alert" className="text-sm font-medium text-red-600">
                                     {createError}
@@ -929,9 +968,10 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                     disabled={creatingLead}
                                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                                 >
-                                    {creatingLead ? "Creating..." : "Create Lead"}
+                                    {creatingLead ? "Creating..." : duplicates.length ? "Create Anyway" : "Create Lead"}
                                 </Button>
                             </div>
+                            </fieldset>
                         </form>
                 </Modal>
             ) : null}
