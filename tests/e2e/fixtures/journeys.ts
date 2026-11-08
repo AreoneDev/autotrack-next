@@ -13,7 +13,7 @@ export function day(offset = 0): string {
 
 export function lead(overrides = {}) {
     return {
-        lead_id: 1, first_name: "Journey", last_name: "Customer", phone: "4165550100",
+        lead_id: 1, version: 1, first_name: "Journey", last_name: "Customer", phone: "4165550100",
         lead_email: "journey@example.test", stage: "CONTACTED", status: true,
         budget: 35000, notes: "Original notes", created_at: `${day()}T12:00:00Z`,
         follow_up_date: `${day(7)}T12:00:00Z`, last_interaction_date: `${day()}T12:00:00Z`,
