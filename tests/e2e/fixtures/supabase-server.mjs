@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
@@ -14,6 +15,8 @@ const user = {
 let tables;
 let nextId;
 let failure;
+let accountPassword;
+let recoveryLink;
 function reset(seed = {}) {
     user.user_metadata = {};
     tables = {
@@ -22,6 +25,8 @@ function reset(seed = {}) {
     };
     nextId = 100;
     failure = null;
+    accountPassword = "test-password-123";
+    recoveryLink = null;
     for (const [table, rows] of Object.entries(seed)) {
         if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
         tables[table] = table === "leads" ? rows.map((row) => ({ version: 1, ...row })) : rows;
@@ -89,19 +94,46 @@ const server = createServer(async (request, response) => {
             failure = body;
             return send(200, {});
         }
+        if (url.pathname === "/__test__/recovery-link" && request.method === "GET") {
+            if (!recoveryLink) return send(404, { message: "No synthetic recovery request" });
+            return send(200, { url: recoveryLink.url });
+        }
+        if (["/auth/v1/recover", "/auth/v1/resend"].includes(url.pathname) && request.method === "POST") {
+            const redirectTo = url.searchParams.get("redirect_to") ?? body.emailRedirectTo ?? body.redirect_to;
+            if (typeof redirectTo !== "string") return send(400, { message: "Missing synthetic redirect" });
+            const redirect = new URL(redirectTo);
+            if (redirect.origin !== `http://127.0.0.1:${appPort}`) return send(400, { message: "Invalid synthetic redirect" });
+            redirect.searchParams.set("code", "synthetic-recovery-code");
+            recoveryLink = { url: redirect.href, challenge: body.code_challenge, used: false };
+            return send(200, {});
+        }
+        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
+            if (typeof body.password === "string") {
+                if (body.password.length < 8) return send(422, { code: "weak_password", msg: "Weak password" });
+                accountPassword = body.password;
+            }
+            if (body.data && typeof body.data === "object" && !Array.isArray(body.data)) {
+                user.user_metadata = { ...user.user_metadata, ...body.data };
+            }
+            return send(200, user);
+        }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
-            if (body.email !== user.email || body.password !== "test-password-123") {
+            if (url.searchParams.get("grant_type") === "pkce") {
+                const challenge = createHash("sha256").update(body.code_verifier ?? "").digest("base64url");
+                if (!recoveryLink || recoveryLink.used || body.auth_code !== "synthetic-recovery-code" || challenge !== recoveryLink.challenge) {
+                    return send(400, { code: "otp_expired", msg: "Invalid synthetic PKCE exchange" });
+                }
+                recoveryLink.used = true;
+                return send(200, session());
+            }
+            if (body.email !== user.email || body.password !== accountPassword) {
                 return send(400, { code: "invalid_credentials", msg: "Invalid login credentials" });
             }
             return send(200, session());
         }
         if (url.pathname === "/auth/v1/user" && request.method === "GET") {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            return send(200, user);
-        }
-        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
-            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
-            user.user_metadata = { ...user.user_metadata, ...body.data };
             return send(200, user);
         }
         if (url.pathname === "/auth/v1/signup" && request.method === "POST") return send(200, { user, session: null });
