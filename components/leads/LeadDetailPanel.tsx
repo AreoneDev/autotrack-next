@@ -32,14 +32,15 @@ import {
 
 import { ScoringService } from "@/domain/business/ScoringService";
 import type { VehicleSelection } from "@/domain/business/VehicleSelectionService";
+import { DuplicateLeadError, validateLeadContact, type LeadFieldErrors, type DuplicateLeadMatch } from "@/domain/business/LeadValidation";
+import DuplicateLeadNotice from "./DuplicateLeadNotice";
 import { Lead } from "@/domain/objects/Lead";
 import { getLeadOutcome, isTerminalLeadStage, leadOutcomeLabels, leadStateAfterStageChange, leadStateForWrite, normalizeLeadStage } from "@/domain/objects/LeadOutcome";
-import { Notification } from "@/domain/objects/Notification";
 import { Task } from "@/domain/objects/Task";
 import { Vehicle } from "@/domain/objects/Vehicle";
 import { LeadRepo } from "@/lib/persistence/real/supabase/LeadRepo";
-import { NotificationRepo } from "@/lib/persistence/real/supabase/NotificationRepo";
 import { TaskRepo } from "@/lib/persistence/real/supabase/TaskRepo";
+import { CommunicationRepo, type CommunicationChannel, type CommunicationOperation } from "@/lib/persistence/real/supabase/CommunicationRepo";
 import VehicleInterestSelector from "@/components/leads/VehicleInterestSelector";
 import ContactHistoryPanel from "@/components/leads/ContactHistoryPanel";
 
@@ -135,7 +136,15 @@ function formatDisplayDate(value: string) {
 }
 
 function toDate(value: string) {
-    return value ? new Date(`${value}T00:00:00`) : new Date();
+    return value ? new Date(value.includes("T") ? value : `${value}T00:00:00`) : new Date();
+}
+
+function formatInteractionDate(value: string) {
+    if (!value) return "N/A";
+    return new Intl.DateTimeFormat("en-CA", {
+        month: "short", day: "numeric", year: "numeric",
+        hour: "numeric", minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
+    }).format(toDate(value));
 }
 
 function toTaskDateTime(date: string, time: string) {
@@ -333,6 +342,10 @@ export default function LeadDetailPanel({
     const router = useRouter();
     const [currentLead, setCurrentLead] = useState(lead);
     const [draftLead, setDraftLead] = useState(lead);
+    const [draftBudget, setDraftBudget] = useState(String(lead.budget));
+    const [fieldErrors, setFieldErrors] = useState<LeadFieldErrors>({});
+    const [duplicates, setDuplicates] = useState<DuplicateLeadMatch[]>([]);
+    const saveInFlight = useRef(false);
     const [draftVehicleInterest, setDraftVehicleInterest] =
         useState<VehicleSelection>(() => getVehicleSelectionFromLead(lead));
     const [draftTradeInVehicle, setDraftTradeInVehicle] =
@@ -341,6 +354,7 @@ export default function LeadDetailPanel({
         sortTasksByNewest(tasks)
     );
     const [leadNotifications, setLeadNotifications] = useState(notifications);
+    const [serverSnapshot, setServerSnapshot] = useState({ lead, tasks, notifications });
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -350,6 +364,8 @@ export default function LeadDetailPanel({
     const [loggingCommunication, setLoggingCommunication] = useState<
         "call" | "email" | "message" | null
     >(null);
+    const communicationInFlight = useRef(false);
+    const pendingCommunications = useRef<Partial<Record<CommunicationChannel, CommunicationOperation>>>({});
     const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [newTaskType, setNewTaskType] = useState("");
@@ -363,15 +379,25 @@ export default function LeadDetailPanel({
     const [draftTaskDate, setDraftTaskDate] = useState("");
     const [draftTaskTime, setDraftTaskTime] = useState("");
     const scoringService = useMemo(() => new ScoringService(), []);
-    const saveInFlight = useRef(false);
     const pendingSave = useRef<{
         fingerprint: string;
         requestId: string;
         lead: Lead;
         interest: VehicleSelection;
         tradeIn: VehicleSelection;
+        duplicateIds: number[];
         priority: ReturnType<ScoringService["calculatePriority"]>;
     } | null>(null);
+
+    // refresh() preserves client state. Adopt the authoritative payload after
+    // refreshing so contact metadata, score and tasks do not stay stale.
+    if (serverSnapshot.lead !== lead || serverSnapshot.tasks !== tasks
+        || serverSnapshot.notifications !== notifications) {
+        setServerSnapshot({ lead, tasks, notifications });
+        setCurrentLead(lead);
+        setLeadTasks(sortTasksByNewest(tasks));
+        setLeadNotifications(notifications);
+    }
 
     async function reloadLeadTasks(taskRepository = new TaskRepo()) {
         const refreshedTasks = await taskRepository.getTasksByLeadId(
@@ -408,6 +434,8 @@ export default function LeadDetailPanel({
         field: Value,
         value: LeadDetailViewModel[Value]
     ) {
+        setFieldErrors({});
+        setDuplicates([]);
         setDraftLead((previous) => ({
             ...previous,
             [field]: value,
@@ -416,6 +444,10 @@ export default function LeadDetailPanel({
 
     async function handleSave() {
         if (saveInFlight.current) return;
+        const validation = validateLeadContact({ ...draftLead, budget: draftBudget },
+            { ...currentLead, budget: String(currentLead.budget) });
+        setFieldErrors(validation.errors);
+        if (Object.keys(validation.errors).length) return;
         saveInFlight.current = true;
         setErrorMessage(null);
         setSaving(true);
@@ -424,24 +456,26 @@ export default function LeadDetailPanel({
             const leadRepository = new LeadRepo();
             const normalizedDraftLead = {
                 ...draftLead,
+                ...validation.values,
                 ...leadStateForWrite(draftLead),
             };
             const leadToSave = createLeadFromViewModel(normalizedDraftLead);
             const priority = scoringService.calculatePriority(leadToSave);
             leadToSave.updateScore(priority.score);
 
-            const fingerprint = JSON.stringify([normalizedDraftLead, draftVehicleInterest, draftTradeInVehicle]);
+            const duplicateIds = duplicates.map((match) => match.leadID);
+            const fingerprint = JSON.stringify([normalizedDraftLead, draftVehicleInterest, draftTradeInVehicle, duplicateIds]);
             if (pendingSave.current?.fingerprint !== fingerprint) {
                 pendingSave.current = {
                     fingerprint, requestId: crypto.randomUUID(), lead: leadToSave,
-                    interest: { ...draftVehicleInterest }, tradeIn: { ...draftTradeInVehicle }, priority,
+                    interest: { ...draftVehicleInterest }, tradeIn: { ...draftTradeInVehicle }, duplicateIds, priority,
                 };
             }
             // Freeze all derived values as well as the ID. Dates/scores can depend
             // on the clock, so reconstructing them would change a retry's payload.
             const pending = pendingSave.current;
             const saved = await leadRepository.saveLeadDetails(
-                pending.lead, pending.interest, pending.tradeIn, pending.requestId
+                pending.lead, pending.interest, pending.tradeIn, pending.requestId, pending.duplicateIds
             );
 
             const vehicleDescription =
@@ -457,6 +491,9 @@ export default function LeadDetailPanel({
                 score: pending.priority.score,
                 priorityLevel: pending.priority.level,
                 priorityReasons: pending.priority.reasons,
+                phone: leadToSave.phone,
+                leadEmail: leadToSave.leadEmail,
+                budget: leadToSave.budget,
                 vehicleInterest: vehicleDescription,
                 vehicleInterestYear: draftVehicleInterest.year,
                 vehicleInterestMake: draftVehicleInterest.make,
@@ -471,13 +508,14 @@ export default function LeadDetailPanel({
 
             setCurrentLead(nextLead);
             setDraftLead(nextLead);
+            setDraftBudget(String(nextLead.budget));
+            setDuplicates([]);
             setIsEditing(false);
             pendingSave.current = null;
             router.refresh();
         } catch (error) {
-            setErrorMessage(
-                error instanceof Error ? error.message : "Failed to save lead."
-            );
+            if (error instanceof DuplicateLeadError) setDuplicates(error.matches);
+            else setErrorMessage(error instanceof Error ? error.message : "Failed to save lead.");
         } finally {
             saveInFlight.current = false;
             setSaving(false);
@@ -485,6 +523,10 @@ export default function LeadDetailPanel({
     }
 
     function handleCancel() {
+        if (saving) return;
+        setFieldErrors({});
+        setDuplicates([]);
+        setDraftBudget(String(currentLead.budget));
         setDraftLead(currentLead);
         setDraftVehicleInterest(getVehicleSelectionFromLead(currentLead));
         setDraftTradeInVehicle(getTradeInSelectionFromLead(currentLead));
@@ -614,48 +656,52 @@ export default function LeadDetailPanel({
     }
 
     async function handleLogCommunication(
-        communicationType: "call" | "email" | "message"
+        communicationType: CommunicationChannel
     ) {
-        const leadName = fullName || "this lead";
-        const communicationTitleMap = {
-            call: `You called ${leadName}`,
-            email: `You sent an email to ${leadName}`,
-            message: `You sent a message to ${leadName}`,
-        };
-
+        if (communicationInFlight.current) return;
+        communicationInFlight.current = true;
         setLoggingCommunication(communicationType);
         setErrorMessage(null);
 
         try {
-            const notificationRepository = new NotificationRepo();
-            const notification = new Notification(
-                new Lead({
-                    leadID: currentLead.leadID,
-                    firstName: currentLead.firstName || "Lead",
-                    lastName: currentLead.lastName,
-                }),
-                communicationTitleMap[communicationType],
-                new Date()
-            );
-            const error =
-                await notificationRepository.insertNotification(notification);
-
-            if (error) {
-                setErrorMessage(error);
-                return;
+            const storageKey = `autotrack:communication:${currentLead.leadID}:${communicationType}`;
+            // Retain the same key after failures, including a response lost
+            // after commit and a subsequent page reload in this tab.
+            const stored = sessionStorage.getItem(storageKey);
+            const operation: CommunicationOperation = pendingCommunications.current[communicationType]
+                ?? (stored ? JSON.parse(stored) : {
+                    operationId: crypto.randomUUID(),
+                    leadId: currentLead.leadID,
+                    channel: communicationType,
+                    occurredAt: new Date().toISOString(),
+                });
+            if (operation.leadId !== currentLead.leadID || operation.channel !== communicationType) {
+                throw new Error("Invalid pending communication.");
             }
-
-            const now = new Date();
-
+            sessionStorage.setItem(storageKey, JSON.stringify(operation));
+            pendingCommunications.current[communicationType] = operation;
+            const result = await new CommunicationRepo().logCommunication(operation);
+            const priority = scoringService.calculatePriority(result.lead);
+            setCurrentLead((current) => ({
+                ...current,
+                lastInteractionDate: result.lead.lastInteractionDate?.toISOString() ?? "",
+                lastInteractionBy: result.lead.lastInteractionBy,
+                score: priority.score,
+                priorityLevel: priority.level,
+                priorityReasons: priority.reasons,
+            }));
+            const notification = result.notification;
             setLeadNotifications((currentNotifications) => [
                 {
                     notificationID: notification.getEventID(),
                     title: notification.getTitle(),
-                    date: now.toISOString().split("T")[0],
+                    date: localDateInput(notification.getDate()),
                     leadID: currentLead.leadID,
                 },
-                ...currentNotifications,
+                ...currentNotifications.filter((item) => item.notificationID !== notification.getEventID()),
             ]);
+            sessionStorage.removeItem(storageKey);
+            delete pendingCommunications.current[communicationType];
             router.refresh();
         } catch (error) {
             setErrorMessage(
@@ -664,6 +710,7 @@ export default function LeadDetailPanel({
                     : "Failed to log communication."
             );
         } finally {
+            communicationInFlight.current = false;
             setLoggingCommunication(null);
         }
     }
@@ -775,6 +822,7 @@ export default function LeadDetailPanel({
 
     return (
         <div className="space-y-6">
+            {isEditing ? <DuplicateLeadNotice matches={duplicates} /> : null}
             {errorMessage ? (
                 <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     {errorMessage}
@@ -855,7 +903,7 @@ export default function LeadDetailPanel({
                                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                                 >
                                     <Save size={16} />
-                                    {saving ? "Saving..." : "Save Changes"}
+                                    {saving ? "Saving..." : duplicates.length ? "Save Anyway" : "Save Changes"}
                                 </Button>
                             </>
                         ) : (
@@ -949,7 +997,7 @@ export default function LeadDetailPanel({
                         Modify Lead Information
                     </h3>
 
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <fieldset disabled={saving} className="mt-5 grid gap-4 md:grid-cols-2">
                         <label className="text-sm font-medium text-slate-700">
                             First Name
                             <Input
@@ -973,22 +1021,31 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Phone
                             <Input
+                                aria-label="Phone"
+                                aria-invalid={Boolean(fieldErrors.phone)}
+                                aria-describedby={fieldErrors.phone ? "edit-phone-error" : undefined}
+                                type="tel"
                                 value={draftLead.phone}
                                 onChange={(event) =>
                                     updateDraft("phone", event.target.value)
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
+                            {fieldErrors.phone ? <span id="edit-phone-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.phone}</span> : null}
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Email
                             <Input
+                                aria-label="Email"
+                                aria-invalid={Boolean(fieldErrors.leadEmail)}
+                                aria-describedby={fieldErrors.leadEmail ? "edit-leadEmail-error" : undefined}
                                 value={draftLead.leadEmail}
                                 onChange={(event) =>
                                     updateDraft("leadEmail", event.target.value)
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
+                            {fieldErrors.leadEmail ? <span id="edit-leadEmail-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.leadEmail}</span> : null}
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Stage
@@ -1036,13 +1093,18 @@ export default function LeadDetailPanel({
                         <label className="text-sm font-medium text-slate-700">
                             Budget
                             <Input
-                                type="number"
-                                value={draftLead.budget}
+                                type="text"
+                                inputMode="decimal"
+                                aria-label="Budget"
+                                aria-invalid={Boolean(fieldErrors.budget)}
+                                aria-describedby={fieldErrors.budget ? "edit-budget-error" : undefined}
+                                value={draftBudget}
                                 onChange={(event) =>
-                                    updateDraft("budget", Number(event.target.value))
+                                    { setDraftBudget(event.target.value); setFieldErrors({}); setDuplicates([]); }
                                 }
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
+                            {fieldErrors.budget ? <span id="edit-budget-error" role="alert" className="mt-1 block text-sm text-red-600">{fieldErrors.budget}</span> : null}
                         </label>
                         <label className="text-sm font-medium text-slate-700">
                             Score
@@ -1204,7 +1266,7 @@ export default function LeadDetailPanel({
                                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-950"
                             />
                         </label>
-                    </div>
+                    </fieldset>
 
                     <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
                         Saving changes for {draftFullName || "this lead"} will update the Supabase lead record.
@@ -1259,7 +1321,7 @@ export default function LeadDetailPanel({
                             />
                             <Field
                                 label="Last Interaction"
-                                value={formatDisplayDate(
+                                value={formatInteractionDate(
                                     currentLead.lastInteractionDate
                                 )}
                                 icon={CalendarClock}

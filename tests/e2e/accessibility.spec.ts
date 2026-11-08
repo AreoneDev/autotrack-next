@@ -78,29 +78,33 @@ test("A11Y-02: key pages, skip link, collapsed navigation and notification discl
         const name = path.slice(1, 2).toUpperCase() + path.slice(2);
         // Use the application's client navigation so a pending task refresh
         // cannot race a hard document navigation in Firefox.
+        const mobile = (page.viewportSize()?.width ?? 0) < 768;
+        if (mobile) await page.getByRole("button", { name: "Open navigation" }).click();
         await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name, exact: true }).click();
         await expect(page).toHaveURL(path);
         await expect(page.getByRole("main")).toHaveCount(1);
         await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+        if (mobile) await page.getByRole("button", { name: "Open navigation" }).click();
         await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: path.slice(1, 2).toUpperCase() + path.slice(2), exact: true })).toHaveAttribute("aria-current", "page");
+        if (mobile) await page.getByRole("button", { name: "Close navigation" }).click();
         await expect(page.getByText(/Loading/i)).toHaveCount(0);
         await expect(page).toHaveTitle(`${path.slice(1, 2).toUpperCase() + path.slice(2)} | AutoTrack`);
         await scan(page, info, path.slice(1));
     }
     await page.goto("/leads");
-    await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+    if ((page.viewportSize()?.width ?? 0) >= 768) await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("main")).toBeFocused();
-    const expand = page.getByRole("button", { name: "Expand sidebar" });
-    if (await expand.count()) await expand.click();
-    await page.getByRole("button", { name: "Collapse sidebar" }).focus();
-    await page.keyboard.press("Enter");
+    const mobile = (page.viewportSize()?.width ?? 0) < 768;
+    if (mobile) await page.getByRole("button", { name: "Open navigation" }).click();
+    else { await page.getByRole("button", { name: "Collapse sidebar" }).focus(); await page.keyboard.press("Enter"); }
     for (const name of ["Dashboard", "Leads", "Agenda", "Analytics"]) {
         await expect(page.getByRole("navigation").getByRole("link", { name, exact: true })).toBeVisible();
     }
     await scan(page, info, "collapsed-sidebar");
+    if (mobile) await page.getByRole("button", { name: "Close navigation" }).click();
     const notifications = page.getByRole("button", { name: "Open notifications" });
     await notifications.focus();
     await page.keyboard.press("Enter");
@@ -209,7 +213,7 @@ test("A11Y-06: narrow agenda controls and date picker fit the viewport", async (
     await page.goto("/agenda");
     for (const locator of [
         page.getByRole("heading", { name: "Agenda", exact: true }),
-        page.getByRole("button", { name: "Sign out", exact: true }),
+        page.getByRole("button", { name: "Open navigation", exact: true }),
         page.getByRole("button", { name: "Previous day", exact: true }),
         page.getByLabel("Agenda date", { exact: true }),
         page.getByRole("button", { name: "Next day", exact: true }),

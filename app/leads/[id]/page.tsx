@@ -86,7 +86,7 @@ function toLeadDetailViewModel(
         priorityReasons: priority.reasons,
         notes: lead.notes,
         createdAt: toDateInputValue(lead.createdAt),
-        lastInteractionDate: toDateInputValue(lead.lastInteractionDate),
+        lastInteractionDate: lead.lastInteractionDate?.toISOString() ?? "",
         lastInteractionBy: lead.lastInteractionBy,
         status: lead.status,
     };

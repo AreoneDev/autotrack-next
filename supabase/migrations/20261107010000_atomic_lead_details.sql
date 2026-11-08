@@ -61,7 +61,7 @@ grant execute on function public.autotrack_resolve_vehicle(jsonb) to authenticat
 
 create function public.autotrack_save_lead_details(
   p_lead_id bigint, p_expected_version bigint, p_request_id uuid,
-  p_details jsonb, p_interest jsonb, p_trade_in jsonb
+  p_details jsonb, p_interest jsonb, p_trade_in jsonb, p_duplicate_ids bigint[] default '{}'
 )
 returns jsonb language plpgsql security invoker set search_path = '' as $$
 declare
@@ -69,16 +69,19 @@ declare
   changes public.leads;
   receipt public.lead_save_requests;
   payload jsonb := jsonb_build_object('lead_id', p_lead_id, 'version', p_expected_version,
-    'details', p_details, 'interest', p_interest, 'trade_in', p_trade_in);
+    'details', p_details, 'interest', p_interest, 'trade_in', p_trade_in, 'duplicate_ids', p_duplicate_ids);
   interest jsonb;
   trade_in jsonb;
   saved_version bigint;
   result jsonb;
+  previous_confirmation text;
 begin
   if auth.uid() is null then raise exception 'Sign in required.' using errcode = '42501'; end if;
   if p_request_id is null or p_expected_version is null then
     raise exception 'Request ID and expected version are required.' using errcode = '22023';
   end if;
+  -- Match the validation RPC's lock order before acquiring the lead row lock.
+  perform pg_advisory_xact_lock(hashtextextended('autotrack.leads:' || auth.uid()::text, 0));
 
   -- Lock before consulting the receipt/version: concurrent calls for this lead
   -- serialize, including two copies of the same request after a lost response.
@@ -110,6 +113,13 @@ begin
   interest := public.autotrack_resolve_vehicle(p_interest);
   trade_in := public.autotrack_resolve_vehicle(p_trade_in);
 
+  previous_confirmation := current_setting('autotrack.duplicate_confirmation', true);
+  perform set_config('autotrack.duplicate_confirmation', jsonb_build_object(
+    'operation', 'UPDATE', 'leadID', p_lead_id,
+    'email', public.autotrack_email_key(changes.lead_email),
+    'phone', coalesce(public.autotrack_phone_key(changes.phone), ''),
+    'ids', to_jsonb(coalesce(p_duplicate_ids, '{}'::bigint[])))::text, true);
+
   update public.leads set
     first_name = changes.first_name, last_name = changes.last_name, phone = changes.phone,
     lead_email = changes.lead_email, lead_division = changes.lead_division,
@@ -126,6 +136,7 @@ begin
   if not found then
     raise exception 'This lead changed in another session. Reload before saving again.' using errcode = 'PT409';
   end if;
+  perform set_config('autotrack.duplicate_confirmation', coalesce(previous_confirmation, ''), true);
 
   if interest is null then
     delete from public.lead_vehicle_interests where lead_id = p_lead_id;
@@ -149,7 +160,7 @@ begin
     values(auth.uid(), p_request_id, p_lead_id, payload, result);
   return result;
 end $$;
-revoke all on function public.autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb) from public, anon;
-grant execute on function public.autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb) to authenticated;
+revoke all on function public.autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb,bigint[]) from public, anon;
+grant execute on function public.autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb,bigint[]) to authenticated;
 notify pgrst, 'reload schema';
 commit;

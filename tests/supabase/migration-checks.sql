@@ -19,7 +19,7 @@ begin
     end loop;
   end loop;
   foreach t in array array['autotrack_resolve_vehicle(jsonb)',
-    'autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb)'] loop
+    'autotrack_save_lead_details(bigint,bigint,uuid,jsonb,jsonb,jsonb,bigint[])'] loop
     if (select prosecdef from pg_proc where oid = ('public.' || t)::regprocedure)
       or has_function_privilege('anon', 'public.' || t, 'EXECUTE')
       or not has_function_privilege('authenticated', 'public.' || t, 'EXECUTE') then

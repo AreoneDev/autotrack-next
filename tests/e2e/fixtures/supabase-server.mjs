@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 
 // A deliberately small HTTP double for browser journeys, NOT a Supabase/RLS emulator.
 // Bind to loopback only; unknown requests fail rather than silently succeeding.
@@ -15,7 +16,10 @@ let tables;
 let nextId;
 let failure;
 let saveRequests;
+let accountPassword;
+let recoveryLink;
 function reset(seed = {}) {
+    user.user_metadata = {};
     tables = {
         leads: [], tasks: [], notifications: [], vehicles: [],
         lead_vehicle_interests: [], lead_trade_in_vehicles: [],
@@ -23,6 +27,8 @@ function reset(seed = {}) {
     nextId = 100;
     failure = null;
     saveRequests = new Map();
+    accountPassword = "test-password-123";
+    recoveryLink = null;
     for (const [table, rows] of Object.entries(seed)) {
         if (!Object.hasOwn(tables, table) || !Array.isArray(rows)) throw new Error("Invalid synthetic seed");
         tables[table] = rows.map(row => table === "leads" ? { version: 1, ...row } : row);
@@ -71,7 +77,7 @@ function filterRows(rows, search) {
 const server = createServer(async (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", `http://127.0.0.1:${appPort}`);
     response.setHeader("Access-Control-Allow-Headers", "*");
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     response.setHeader("Content-Type", "application/json");
     const send = (status, data) => { response.writeHead(status); response.end(JSON.stringify(data)); };
     if (request.method === "OPTIONS") return send(200, {});
@@ -90,8 +96,40 @@ const server = createServer(async (request, response) => {
             failure = body;
             return send(200, {});
         }
+        if (url.pathname === "/__test__/recovery-link" && request.method === "GET") {
+            if (!recoveryLink) return send(404, { message: "No synthetic recovery request" });
+            return send(200, { url: recoveryLink.url });
+        }
+        if (["/auth/v1/recover", "/auth/v1/resend"].includes(url.pathname) && request.method === "POST") {
+            const redirectTo = url.searchParams.get("redirect_to") ?? body.emailRedirectTo ?? body.redirect_to;
+            if (typeof redirectTo !== "string") return send(400, { message: "Missing synthetic redirect" });
+            const redirect = new URL(redirectTo);
+            if (redirect.origin !== `http://127.0.0.1:${appPort}`) return send(400, { message: "Invalid synthetic redirect" });
+            redirect.searchParams.set("code", "synthetic-recovery-code");
+            recoveryLink = { url: redirect.href, challenge: body.code_challenge, used: false };
+            return send(200, {});
+        }
+        if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { msg: "Missing test session" });
+            if (typeof body.password === "string") {
+                if (body.password.length < 8) return send(422, { code: "weak_password", msg: "Weak password" });
+                accountPassword = body.password;
+            }
+            if (body.data && typeof body.data === "object" && !Array.isArray(body.data)) {
+                user.user_metadata = { ...user.user_metadata, ...body.data };
+            }
+            return send(200, user);
+        }
         if (url.pathname === "/auth/v1/token" && request.method === "POST") {
-            if (body.email !== user.email || body.password !== "test-password-123") {
+            if (url.searchParams.get("grant_type") === "pkce") {
+                const challenge = createHash("sha256").update(body.code_verifier ?? "").digest("base64url");
+                if (!recoveryLink || recoveryLink.used || body.auth_code !== "synthetic-recovery-code" || challenge !== recoveryLink.challenge) {
+                    return send(400, { code: "otp_expired", msg: "Invalid synthetic PKCE exchange" });
+                }
+                recoveryLink.used = true;
+                return send(200, session());
+            }
+            if (body.email !== user.email || body.password !== accountPassword) {
                 return send(400, { code: "invalid_credentials", msg: "Invalid login credentials" });
             }
             return send(200, session());
@@ -114,6 +152,24 @@ const server = createServer(async (request, response) => {
             if (previous) return previous.fingerprint === fingerprint ? send(200, previous.result)
                 : send(400, { message: "Request ID was already used for different changes." });
             if (row.version !== body.p_expected_version) return send(409, { code: "PT409", message: "This lead changed in another session. Reload before saving again." });
+            const emailKey = value => (value ?? "").trim().toLowerCase();
+            const phoneKey = value => {
+                let key = (value ?? "").replace(/[\s().-]/g, "");
+                if (/^00/.test(key)) key = "+" + key.slice(2);
+                if (/^\d{10}$/.test(key)) key = "+1" + key;
+                else if (/^1\d{10}$/.test(key)) key = "+" + key;
+                return key;
+            };
+            const email = emailKey(body.p_details.lead_email), phone = phoneKey(body.p_details.phone);
+            const emailChanged = email !== emailKey(row.lead_email), phoneChanged = phone !== phoneKey(row.phone);
+            const matches = tables.leads.filter(other => other !== row).map(other => ({
+                leadID: other.lead_id, name: [other.first_name, other.last_name].filter(Boolean).join(" "),
+                email: Boolean(emailChanged && email && emailKey(other.lead_email) === email),
+                phone: Boolean(phoneChanged && phone && phoneKey(other.phone) === phone),
+            })).filter(match => match.email || match.phone);
+            if (matches.some(match => !(body.p_duplicate_ids ?? []).includes(match.leadID))) {
+                return send(400, { code: "P0001", message: "AUTOTRACK_DUPLICATE_LEAD", details: JSON.stringify(matches) });
+            }
             const staged = structuredClone(tables);
             const checkFailure = (table, method) => {
                 if (failure?.table === table && failure.method === method) {
@@ -142,6 +198,68 @@ const server = createServer(async (request, response) => {
             tables = staged;
             saveRequests.set(body.p_request_id, { fingerprint, result });
             return send(200, result);
+        }
+        // Journey double only. Real transaction/RLS assertions live in
+        // tests/supabase/communication-checks.sql, executed by test:supabase.
+        if (url.pathname === "/rest/v1/rpc/autotrack_log_communication" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const lead = tables.leads.find((row) => row.lead_id === body.p_lead_id);
+            if (!lead) return send(400, { message: "Lead not found." });
+            const existing = tables.notifications.find((row) => row.sync_id === body.p_operation_id);
+            if (existing) return send(200, { lead, notification: existing });
+            if (lead.version !== body.p_expected_version) return send(409, { code: "40001", message: "Lead changed. Retry." });
+            if (failure?.table === "notifications" && failure.method === "POST") {
+                failure = null;
+                return send(503, { message: "Synthetic write failure" });
+            }
+            const prefix = { call: "You called ", email: "You sent an email to ", message: "You sent a message to " }[body.p_channel];
+            if (!prefix) return send(400, { message: "Invalid communication." });
+            const notification = { notification_id: nextId++, lead_id: lead.lead_id,
+                title: prefix + [lead.first_name, lead.last_name].filter(Boolean).join(" "),
+                date: body.p_occurred_at, sync_id: body.p_operation_id };
+            tables.notifications.push(notification);
+            if (!lead.last_interaction_date || new Date(body.p_occurred_at) >= new Date(lead.last_interaction_date)) {
+                Object.assign(lead, { last_interaction_date: body.p_occurred_at, last_interaction_by: "USER",
+                    score: body.p_score, version: lead.version + 1 });
+            }
+            return send(200, { lead, notification });
+        }
+        // Browser contract double only. Database trigger/RLS/concurrency semantics
+        // are exercised against PostgreSQL by tests/lead-validation/postgres.mjs.
+        if (url.pathname === "/rest/v1/rpc/save_lead_validated" && request.method === "POST") {
+            if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
+            const draft = body.p_lead;
+            const previous = draft.lead_id ? tables.leads.find(row => row.lead_id === draft.lead_id) : null;
+            if (draft.lead_id && !previous) return send(400, { message: "Lead not found." });
+            const method = previous ? "PATCH" : "POST";
+            if (failure?.table === "leads" && failure.method === method) {
+                failure = null;
+                return send(503, { message: "Synthetic write failure" });
+            }
+            const emailKey = value => (value ?? "").trim().toLowerCase();
+            const phoneKey = value => {
+                let key = (value ?? "").replace(/[\s().-]/g, "");
+                if (/^00/.test(key)) key = "+" + key.slice(2);
+                if (/^\d{10}$/.test(key)) key = "+1" + key;
+                else if (/^1\d{10}$/.test(key)) key = "+" + key;
+                return key;
+            };
+            const emailChanged = !previous || emailKey(previous.lead_email) !== emailKey(draft.lead_email);
+            const phoneChanged = !previous || phoneKey(previous.phone) !== phoneKey(draft.phone);
+            const matches = tables.leads.filter(row => row !== previous).map(row => ({
+                leadID: row.lead_id, name: [row.first_name, row.last_name].filter(Boolean).join(" "),
+                email: Boolean(emailChanged && emailKey(draft.lead_email) && emailKey(row.lead_email) === emailKey(draft.lead_email)),
+                phone: Boolean(phoneChanged && phoneKey(draft.phone) && phoneKey(row.phone) === phoneKey(draft.phone)),
+            })).filter(row => row.email || row.phone);
+            if (matches.some(row => !(body.p_duplicate_ids ?? []).includes(row.leadID))) {
+                return send(400, { code: "P0001", message: "AUTOTRACK_DUPLICATE_LEAD", details: JSON.stringify(matches) });
+            }
+            const saved = { ...draft, lead_id: draft.lead_id ?? nextId++ };
+            if (!previous || draft.lead_email !== previous.lead_email) saved.lead_email = emailKey(saved.lead_email);
+            if (!previous || draft.phone !== previous.phone) saved.phone = phoneKey(saved.phone);
+            if (previous) Object.assign(previous, saved);
+            else tables.leads.push(saved);
+            return send(200, saved);
         }
         if (url.pathname === "/rest/v1/rpc/autotrack_delete_lead" && request.method === "POST") {
             if (!request.headers.authorization?.startsWith("Bearer ey")) return send(401, { message: "Missing test session" });
@@ -193,7 +311,10 @@ const server = createServer(async (request, response) => {
             tables[table].push(...inserted);
             return send(201, request.headers.accept?.includes("vnd.pgrst.object+json") ? inserted[0] : inserted);
         }
-        if (request.method === "PATCH") { selected.forEach((row) => Object.assign(row, body, table === "leads" ? { version: (row.version ?? 1) + 1 } : {})); return send(200, selected); }
+        if (request.method === "PATCH") {
+            selected.forEach((row) => Object.assign(row, body, table === "leads" ? { version: (row.version ?? 1) + 1 } : {}));
+            return send(200, selected);
+        }
         if (request.method === "DELETE") { tables[table] = tables[table].filter((row) => !selected.includes(row)); return send(200, selected); }
         return send(405, { message: "Unsupported test method" });
     } catch (error) {

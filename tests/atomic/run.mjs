@@ -21,9 +21,9 @@ const actor = async id => {
     await query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id })]);
     await db.exec("set role authenticated");
 };
-const save = (id, expected, request, details, interest = vehicle, tradeIn = vehicle) => query(
-    "select public.autotrack_save_lead_details($1,$2,$3,$4,$5,$6) as result",
-    [id, expected, request, details, interest, tradeIn]
+const save = (id, expected, request, details, interest = vehicle, tradeIn = vehicle, duplicates = []) => query(
+    "select public.autotrack_save_lead_details($1,$2,$3,$4,$5,$6,$7) as result",
+    [id, expected, request, details, interest, tradeIn, duplicates]
 ).then(rows => rows[0].result);
 const snapshot = async id => (await query(`select jsonb_build_object(
     'lead', (select to_jsonb(l) from public.leads l where lead_id=$1),
@@ -108,6 +108,14 @@ try {
             await rejects(save(id, version, randomUUID(), details), "22023");
         }
         assert.deepEqual(await snapshot(id), state);
+    });
+    await test("duplicate contact confirmation is enforced within the atomic save", async () => {
+        const other = (await query("insert into public.leads(first_name, lead_email) values('Duplicate', 'duplicate@example.test') returning lead_id"))[0].lead_id;
+        const state = await snapshot(id);
+        await rejects(save(id, version, randomUUID(), { lead_email: "duplicate@example.test" }), "P0001");
+        assert.deepEqual(await snapshot(id), state);
+        const result = await save(id, version, randomUUID(), { lead_email: "duplicate@example.test" }, vehicle, vehicle, [other]);
+        assert.equal(result.version, ++version);
     });
     await test("foreign lead/catalogue rows rejected by RLS; receipts isolated", async () => {
         const state = await snapshot(id);

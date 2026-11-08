@@ -36,7 +36,7 @@ describe("UI-GATE — protected content state transitions", () => {
         expect(screen.queryByText("Private customer")).not.toBeInTheDocument();
         expect(router.replace).toHaveBeenCalledWith("/login");
         unmount();
-        expect(supabase.auth.onAuthStateChange.mock.results[0].value.data.subscription.unsubscribe).toHaveBeenCalledTimes(1);
+        expect(supabase.auth.onAuthStateChange.mock.results[0].value.data.subscription.unsubscribe).toHaveBeenCalledTimes(2);
     });
 
     it("UI-GATE-03: session service failures produce an alert without showing data", async () => {
@@ -46,8 +46,8 @@ describe("UI-GATE — protected content state transitions", () => {
         expect(screen.queryByText("Private customer")).not.toBeInTheDocument();
     });
 
-    it("UI-GATE-04: login is public without a session check", () => {
-        jest.mocked(usePathname).mockReturnValue("/login");
+    it.each(["/login", "/forgot-password", "/reset-password", "/resend-confirmation"])("UI-GATE-04: %s is public without a session check", (path) => {
+        jest.mocked(usePathname).mockReturnValue(path);
         render(<AuthGate>Sign-in form</AuthGate>);
         expect(screen.getByText("Sign-in form")).toBeInTheDocument();
         expect(supabase.auth.getSession).not.toHaveBeenCalled();

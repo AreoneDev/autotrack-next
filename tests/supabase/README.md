@@ -38,6 +38,8 @@ The historical migration requires one fixed email lookup. The fixture supplies a
 | Six real adapters: CRUD, mapping, associations and separate clients | DB-LIVE-01/03 |
 | Foreign/anonymous RPC denial; own atomic delete and history | DB-LIVE-02 |
 | Concurrent aggregate saves, duplicate request replay and delayed retry | `atomic.live.ts`; [transaction checks](../atomic/README.md) |
+| Communication fields and score, three channels, replay, version conflict, delayed event, rollback after partial execution, foreign/anonymous RPC denial | `communication-checks.sql` |
+| Concurrent communication retries create one notification and one lead revision through HTTP | CONTACT-LIVE-01 |
 
 Negative tests assert SQL error codes or zero affected rows **and** reread protected fixtures where applicable. This avoids mistaking a successful HTTP response containing no rows for a successful unauthorized write. No skipped cases or credential-dependent fallbacks are used. Machine-readable results are saved to `test-results/supabase-results.json` and uploaded by CI.
 
