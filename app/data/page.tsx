@@ -99,6 +99,7 @@ export default function CustomerDataPage() {
     }
 
     return <div className="space-y-6">
+        <Link href="/settings" className="inline-flex min-h-11 items-center text-sm text-slate-600 hover:text-blue-700">← Settings</Link>
         <h2 className="text-2xl font-semibold">Manage customer data</h2>
         <section aria-labelledby="export-title" className="space-y-3 rounded-lg border bg-white p-5">
             <h2 id="export-title" className="text-lg font-medium">Export CSV</h2>

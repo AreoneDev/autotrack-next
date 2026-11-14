@@ -13,11 +13,9 @@ import {
     ChevronRight,
     LayoutDashboard,
     Users,
-    ArchiveRestore,
 } from "lucide-react";
 
 const navItems = [
-    { label: "Customer data", href: "/data", icon: ArchiveRestore },
     {
         label: "Dashboard",
         href: "/dashboard",
@@ -95,6 +93,7 @@ export default function Sidebar({ mobile = false, onNavigate }: { mobile?: boole
                             key={item.href}
                             href={item.href}
                             aria-label={item.label}
+                            title={collapsed ? item.label : undefined}
                             aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined}
                             prefetch={false}
                             onClick={onNavigate}
