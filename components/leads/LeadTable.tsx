@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
     type FormEvent,
-    type PointerEvent,
     useMemo,
     useRef,
     useState,
@@ -30,6 +29,9 @@ import LeadBriefModal from "./LeadBriefModal";
 
 interface LeadTableProps {
     leads: Lead[];
+    followUpLeadIds?: number[] | null;
+    unrepliedLeadIds?: number[] | null;
+    onRetryWorkFilters?: () => void;
 }
 
 function normalizeVehicleFilterText(value: string): string {
@@ -93,10 +95,17 @@ function SearchableVehicleFilter({
         placeholder={placeholder} onChange={onChange} onSelect={onChange} />;
 }
 
-export default function LeadTable({ leads }: LeadTableProps) {
+export default function LeadTable({ leads, followUpLeadIds = null, unrepliedLeadIds = null, onRetryWorkFilters }: LeadTableProps) {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [leadList, setLeadList] = useState<Lead[]>(leads);
     const [searchText, setSearchText] = useState("");
+    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [pagination, setPagination] = useState({ page: 1, key: "" });
+    const [pageSize, setPageSize] = useState(25);
+    const [needsFollowUp, setNeedsFollowUp] = useState(false);
+    const [needsReply, setNeedsReply] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
+    const moreFiltersRef = useRef<HTMLButtonElement>(null);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [stageFilter, setStageFilter] = useState("ALL");
     const [tradeInFilter, setTradeInFilter] = useState("ALL");
@@ -115,13 +124,6 @@ export default function LeadTable({ leads }: LeadTableProps) {
     const [fieldErrors, setFieldErrors] = useState<LeadFieldErrors>({});
     const [duplicates, setDuplicates] = useState<DuplicateLeadMatch[]>([]);
     const [createError, setCreateError] = useState<string | null>(null);
-    const [fabPosition, setFabPosition] = useState<{
-        x: number;
-        y: number;
-    } | null>(null);
-    const dragOffsetRef = useRef({ x: 0, y: 0 });
-    const dragStartRef = useRef({ x: 0, y: 0 });
-    const draggedRef = useRef(false);
     const [newLead, setNewLead] = useState({
         firstName: "",
         lastName: "",
@@ -274,6 +276,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
     };
 
     const hasActiveFilters =
+        needsFollowUp || needsReply ||
         searchText.trim() !== "" ||
         statusFilter !== "ALL" ||
         stageFilter !== "ALL" ||
@@ -466,6 +469,8 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     .includes(requestedVehicleModel);
 
             return (
+                (!needsFollowUp || followUpLeadIds === null || (getLeadOutcome(lead) === "ACTIVE" && followUpLeadIds.includes(lead.leadID))) &&
+                (!needsReply || unrepliedLeadIds === null || unrepliedLeadIds.includes(lead.leadID)) &&
                 matchesSearch &&
                 matchesStatus &&
                 matchesStage &&
@@ -478,6 +483,10 @@ export default function LeadTable({ leads }: LeadTableProps) {
         });
     }, [
         hasActiveFilters,
+        needsFollowUp,
+        needsReply,
+        followUpLeadIds,
+        unrepliedLeadIds,
         leadList,
         scoreFilter,
         searchText,
@@ -489,7 +498,16 @@ export default function LeadTable({ leads }: LeadTableProps) {
         vehicleYearFilter,
     ]);
 
+    const paginationKey = JSON.stringify([searchText, statusFilter, stageFilter, tradeInFilter, scoreFilter, vehicleYearFilter, vehicleMakeFilter, vehicleModelFilter, needsFollowUp, needsReply, pageSize]);
+    const pageCount = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+    if (pagination.key !== paginationKey || pagination.page > pageCount) setPagination({ page: pagination.key === paginationKey ? pageCount : 1, key: paginationKey });
+    const currentPage = Math.min(pagination.key === paginationKey ? pagination.page : 1, pageCount);
+    const firstIndex = (currentPage - 1) * pageSize;
+    const visibleLeads = filteredLeads.slice(firstIndex, firstIndex + pageSize);
+
     function clearFilters() {
+        setNeedsFollowUp(false);
+        setNeedsReply(false);
         setSearchText("");
         setStatusFilter("ALL");
         setStageFilter("ALL");
@@ -498,104 +516,24 @@ export default function LeadTable({ leads }: LeadTableProps) {
         setVehicleYearFilter("");
         setVehicleMakeFilter("");
         setVehicleModelFilter("");
-    }
-
-    function clampFabPosition(x: number, y: number, width: number, height: number) {
-        const margin = 16;
-
-        return {
-            x: Math.min(Math.max(margin, x), window.innerWidth - width - margin),
-            y: Math.min(Math.max(margin, y), window.innerHeight - height - margin),
-        };
-    }
-
-    function handleFabPointerDown(event: PointerEvent<HTMLButtonElement>) {
-        const rect = event.currentTarget.getBoundingClientRect();
-
-        dragOffsetRef.current = {
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top,
-        };
-        dragStartRef.current = {
-            x: event.clientX,
-            y: event.clientY,
-        };
-        draggedRef.current = false;
-
-        setFabPosition({ x: rect.left, y: rect.top });
-        event.currentTarget.setPointerCapture(event.pointerId);
-    }
-
-    function handleFabPointerMove(event: PointerEvent<HTMLButtonElement>) {
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-            return;
-        }
-
-        const rect = event.currentTarget.getBoundingClientRect();
-        const deltaX = Math.abs(event.clientX - dragStartRef.current.x);
-        const deltaY = Math.abs(event.clientY - dragStartRef.current.y);
-
-        if (deltaX > 4 || deltaY > 4) {
-            draggedRef.current = true;
-        }
-
-        setFabPosition(
-            clampFabPosition(
-                event.clientX - dragOffsetRef.current.x,
-                event.clientY - dragOffsetRef.current.y,
-                rect.width,
-                rect.height
-            )
-        );
-    }
-
-    function handleFabPointerUp(event: PointerEvent<HTMLButtonElement>) {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-    }
-
-    function handleFabClick() {
-        if (draggedRef.current) {
-            draggedRef.current = false;
-            return;
-        }
-
-        setCreateOpen(true);
-        setCreateError(null);
+        searchRef.current?.focus();
     }
 
     return (
         <div className="pb-32">
-            <div className="mb-8 rounded-lg border bg-white p-6 shadow-sm">
-                <div className="border-b border-slate-100 pb-4">
-                    <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                        Lead Filters
-                    </h2>
-                </div>
-
-                <div className="mt-5 space-y-6">
-                    <section>
-                        <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Search
-                        </h3>
-                        <Input
-                            type="text"
-                            aria-label="Search leads"
-                            placeholder="Search by customer name, email, or phone"
-                            value={searchText}
-                            onChange={(event) =>
-                                setSearchText(event.target.value)
-                            }
-                            className="w-full rounded-lg border px-4 py-3 text-gray-900 lg:max-w-4xl"
-                        />
-                    </section>
-
-                    <section>
-                        <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Basic Filters
-                        </h3>
-                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">All leads</h2>
+                <Button type="button" onClick={() => { setCreateError(null); setCreateOpen(true); }} className="bg-blue-600 text-white hover:bg-blue-700" aria-label="Create new lead"><Plus size={18} /> New Lead</Button>
+            </div>
+            <section aria-label="Search and filter leads" className="rounded-lg border bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-2 items-end gap-3 xl:grid-cols-[minmax(16rem,1fr)_auto_auto_auto]">
+                    <div className="col-span-2 xl:col-span-1">
+                        <label htmlFor="lead-search" className="text-xs font-semibold text-slate-500">Search · name, email, phone</label>
+                        <div className="relative mt-1">
+                            <Input ref={searchRef} id="lead-search" type="text" aria-label="Search leads" placeholder="Search by customer name, email, or phone" value={searchText} onChange={(event) => setSearchText(event.target.value)} className="w-full pr-12" />
+                            {searchText && <Button type="button" variant="ghost" aria-label="Clear search" onClick={() => { setSearchText(""); searchRef.current?.focus(); }} className="absolute right-0 top-0"><X size={16} /></Button>}
+                        </div>
+                    </div>
                             <SelectField
                                 aria-label="Filter by status"
                                 value={statusFilter}
@@ -630,6 +568,19 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <SelectItem value="CLOSED">Closed</SelectItem>
                             </SelectField>
 
+
+                    <Button ref={moreFiltersRef} type="button" variant="outline" aria-expanded={advancedOpen} aria-controls="lead-advanced-filters" onClick={() => setAdvancedOpen((open) => !open)} className="col-span-2 min-h-10 xl:col-span-1">
+                        More filters {([needsFollowUp, needsReply, tradeInFilter !== "ALL", scoreFilter !== "ALL", !!vehicleYearFilter.trim(), !!vehicleMakeFilter.trim(), !!vehicleModelFilter.trim()].filter(Boolean).length || "")}
+                    </Button>
+                </div>
+                <div id="lead-advanced-filters" hidden={!advancedOpen} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) { setAdvancedOpen(false); moreFiltersRef.current?.focus(); } }} className="mt-4 space-y-4 border-t pt-4">
+                    <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
+                        <label className="flex min-h-10 items-center gap-2"><input type="checkbox" checked={needsFollowUp} disabled={followUpLeadIds === null} onChange={(event) => setNeedsFollowUp(event.target.checked)} /> Follow-up due through today</label>
+                        <label className="flex min-h-10 items-center gap-2"><input type="checkbox" checked={needsReply} disabled={unrepliedLeadIds === null} onChange={(event) => setNeedsReply(event.target.checked)} /> Unreplied customer contact</label>
+                    </div>
+                    <p className="text-xs text-slate-500">Follow-up: active leads with an incomplete follow-up task due on or before today. Unreplied: recorded incoming customer contacts awaiting a reply.</p>
+                    {(followUpLeadIds === null || unrepliedLeadIds === null) && <p role="status" className="text-sm text-slate-600">Some work filters are unavailable. {onRetryWorkFilters && <Button type="button" variant="link" onClick={onRetryWorkFilters}>Retry</Button>}</p>}
+                    <div className="grid gap-3 sm:grid-cols-2 xl:max-w-xl">
                             <SelectField
                                 aria-label="Filter by trade-in"
                                 value={tradeInFilter}
@@ -656,18 +607,10 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 <SelectItem value="BETWEEN_50_79">50 - 79</SelectItem>
                                 <SelectItem value="ABOVE_80">80+</SelectItem>
                             </SelectField>
-                        </div>
-                    </section>
-
-                    <section>
-                        <div className="mb-2 flex items-center gap-2">
-
-                            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                Vehicle Interest
-                            </h3>
-                        </div>
-
-                        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                    </div>
+                    <section aria-label="Vehicle interest">
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Vehicle interest</h3>
+                        <div className="grid gap-3 lg:grid-cols-3">
                             <SearchableVehicleFilter
                                 value={vehicleYearFilter}
                                 options={vehicleYearOptions}
@@ -690,35 +633,28 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 onChange={setVehicleModelFilter}
                             />
 
-                            <div className="flex items-end">
-                                {hasActiveFilters ? (
-                                    <Button variant="ghost"
-                                        onClick={clearFilters}
-                                        className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                                    >
-                                        Clear Filters
-                                    </Button>
-                                ) : (
-                                    <div className="hidden lg:block" />
-                                )}
-                            </div>
                         </div>
                     </section>
                 </div>
-
-                <div role="status" className="mt-6 text-sm">
-                    <p className="text-slate-600">
-                        Showing{" "}
-                        <span className="font-semibold text-slate-950">
-                            {filteredLeads.length}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-semibold text-slate-950">
-                            {leadList.length}
-                        </span>{" "}
-                        leads
-                    </p>
-                </div>
+            </section>
+            {((needsFollowUp && followUpLeadIds === null) || (needsReply && unrepliedLeadIds === null)) && <p role="alert" className="mt-3 text-sm text-amber-800">A selected work filter is unavailable and is not applied. {onRetryWorkFilters && <Button type="button" variant="link" onClick={onRetryWorkFilters}>Retry</Button>}</p>}
+            <div className="my-4 flex flex-wrap items-center gap-2 text-sm">
+                <p role="status" className="mr-auto text-slate-600">Showing <strong className="text-slate-950">{filteredLeads.length}</strong> of <strong className="text-slate-950">{leadList.length}</strong> leads</p>
+                {hasActiveFilters && <Button type="button" variant="ghost" onClick={clearFilters}>Clear Filters</Button>}
+                {hasActiveFilters && <div className="flex w-full flex-wrap gap-2" aria-label="Applied filters">
+                    {[
+                        {label: "Follow-up", value: needsFollowUp ? "Due through today" : "", clear: () => setNeedsFollowUp(false)},
+                        {label: "Reply", value: needsReply ? "Unreplied customer contact" : "", clear: () => setNeedsReply(false)},
+                        {label: "Search", value: searchText.trim(), clear: () => setSearchText("")},
+                        {label: "Status", value: statusFilter === "ALL" ? "" : ({ ACTIVE: "Active", LOST: "Lost", DELIVERED: "Delivered", CLOSED: "Closed (outcome unconfirmed)" }[statusFilter] ?? statusFilter), clear: () => setStatusFilter("ALL")},
+                        {label: "Stage", value: stageFilter === "ALL" ? "" : stageFilter.replaceAll("_", " "), clear: () => setStageFilter("ALL")},
+                        {label: "Trade-in", value: tradeInFilter === "ALL" ? "" : tradeInFilter === "YES" ? "Yes" : "No", clear: () => setTradeInFilter("ALL")},
+                        {label: "Score", value: scoreFilter === "ALL" ? "" : ({ BELOW_50: "Below 50", BETWEEN_50_79: "50 - 79", ABOVE_80: "80+" }[scoreFilter] ?? scoreFilter), clear: () => setScoreFilter("ALL")},
+                        {label: "Year", value: vehicleYearFilter.trim(), clear: () => handleVehicleYearFilterChange("")},
+                        {label: "Make", value: vehicleMakeFilter.trim(), clear: () => handleVehicleMakeFilterChange("")},
+                        {label: "Model", value: vehicleModelFilter.trim(), clear: () => setVehicleModelFilter("")},
+                    ].filter((filter) => filter.value).map((filter) => <Button key={filter.label} type="button" variant="outline" onClick={() => { filter.clear(); moreFiltersRef.current?.focus(); }} aria-label={`Remove ${filter.label}: ${filter.value}`} className="h-auto max-w-full whitespace-normal bg-blue-50 text-blue-700">{filter.label}: {filter.value} <X size={14} aria-hidden="true" /></Button>)}
+                </div>}
             </div>
 
             <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
@@ -728,8 +664,8 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     </div>
                 ) : null}
 
-                <Table className="w-full text-left text-sm">
-                    <TableHeader className="bg-gray-100 text-gray-900">
+                <Table className="block w-full text-left text-sm md:table">
+                    <TableHeader className="hidden bg-gray-100 text-gray-900 md:table-header-group">
                     <TableRow>
                         <TableHead className="px-4 py-4">Lead Status</TableHead>
                         <TableHead className="px-4 py-4">Name</TableHead>
@@ -743,8 +679,8 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     </TableRow>
                     </TableHeader>
 
-                    <TableBody>
-                    {filteredLeads.map((lead) => (
+                    <TableBody className="block md:table-row-group">
+                    {visibleLeads.map((lead) => (
                         <LeadTableRow
                             key={lead.leadID}
                             lead={lead}
@@ -766,42 +702,30 @@ export default function LeadTable({ leads }: LeadTableProps) {
                                 colSpan={9}
                                 className="px-4 py-10 text-center text-sm text-slate-500"
                             >
-                                No leads match the selected filters.
+                                {hasActiveFilters ? "No leads match the selected filters." : "No leads yet. Create a lead to get started."}
                             </TableCell>
                         </TableRow>
                     ) : null}
                     </TableBody>
                 </Table>
+                {filteredLeads.length > 0 && <nav aria-label="Lead results pages" className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm">
+                    <span role="status">{firstIndex + 1}–{Math.min(firstIndex + pageSize, filteredLeads.length)} of {filteredLeads.length} leads</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <label htmlFor="lead-page-size">Per page</label>
+                        <select id="lead-page-size" className="rounded-md border bg-white px-2 py-2" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+                            <option value={25}>25</option><option value={50}>50</option><option value={100}>100</option>
+                        </select>
+                        <Button type="button" variant="outline" disabled={currentPage === 1} onClick={() => setPagination({ page: currentPage - 1, key: paginationKey })}>Previous</Button>
+                        <span>Page {currentPage} of {pageCount}</span>
+                        <Button type="button" variant="outline" disabled={currentPage === pageCount} onClick={() => setPagination({ page: currentPage + 1, key: paginationKey })}>Next</Button>
+                    </div>
+                </nav>}
             </div>
 
             <LeadBriefModal
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
             />
-
-            <Button variant="ghost"
-                onClick={handleFabClick}
-                onPointerDown={handleFabPointerDown}
-                onPointerMove={handleFabPointerMove}
-                onPointerUp={handleFabPointerUp}
-                onPointerCancel={handleFabPointerUp}
-                style={
-                    fabPosition
-                        ? {
-                              left: fabPosition.x,
-                              top: fabPosition.y,
-                          }
-                        : undefined
-                }
-                className={`fixed z-40 inline-flex touch-none select-none items-center gap-2 rounded-full bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 ${
-                    fabPosition ? "" : "bottom-6 right-6"
-                } cursor-grab active:cursor-grabbing`}
-                aria-label="Create new lead"
-                title="Drag to move, click to create new lead"
-            >
-                <Plus size={20} />
-                <span className="hidden sm:inline">New Lead</span>
-            </Button>
 
             {createOpen ? (
                 <Modal labelledBy="create-lead-title" onClose={() => { if (!creatingLead) setCreateOpen(false); }} className="w-full max-w-2xl">

@@ -95,10 +95,11 @@ test("PERF-UI-01: 1,000 synthetic leads load and filter within the local regress
     });
     const started = performance.now();
     await page.goto("/leads");
-    await expect(page.getByRole("link", { name: "Synthetic Customer999", exact: true })).toBeAttached();
+    await expect(page.getByRole("link", { name: "Synthetic Customer0", exact: true })).toBeAttached();
     const loadMs = performance.now() - started;
     const filtered = performance.now();
     await page.getByPlaceholder("Search by customer name, email, or phone").fill("customer999@example.test");
+    await expect(page.getByRole("link", { name: "Synthetic Customer999", exact: true })).toBeAttached();
     await expect(page.getByRole("row")).toHaveCount(2);
     const filterMs = performance.now() - filtered;
     const navigation = await page.evaluate(() => {
