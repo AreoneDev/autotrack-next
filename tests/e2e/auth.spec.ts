@@ -27,7 +27,7 @@ test("E2E-AUTH-02: login, authenticated navigation, and logout", async ({ page }
         await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
     }
     await page.goto("/leads");
-    await expect(page.getByRole("heading", { name: "Lead Filters" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /More filters/ })).toHaveAttribute("aria-expanded", "false");
     if ((page.viewportSize()?.width ?? 0) < 768) {
         const openNavigation = page.getByRole("button", { name: "Open navigation" });
         await openNavigation.click();
