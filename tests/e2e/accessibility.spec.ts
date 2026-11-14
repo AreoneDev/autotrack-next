@@ -184,6 +184,7 @@ test("A11Y-04: lead details, edit controls, keyboard autocomplete and safe delet
     await page.keyboard.press("Escape");
     await expect(trigger).toBeFocused();
     await page.goto("/leads");
+    await page.getByRole("button", { name: /More filters/ }).click();
     const make = page.getByRole("combobox", { name: "Filter by vehicle make" });
     await make.focus(); await page.keyboard.type("Custom"); await page.keyboard.press("Escape");
     await expect(make).toHaveValue("Custom");

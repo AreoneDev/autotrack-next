@@ -42,6 +42,7 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
     ])("UI-LEAD-02: score boundaries in %s", async (filter, names) => {
         setup();
         const user = userEvent.setup();
+        await user.click(screen.getByRole("button", { name: /More filters/ }));
         await user.click(screen.getByRole("combobox", { name: "Filter by score" }));
         await user.click(await screen.findByRole("option", { name: ({ BELOW_50: "Below 50", BETWEEN_50_79: "50 - 79", ABOVE_80: "80+" } as Record<string, string>)[filter as string] }));
         expect(screen.getAllByRole("row")).toHaveLength(names.length + 1);
@@ -57,6 +58,7 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
         await user.click(await screen.findByRole("option", { name: "Active" }));
         expect(screen.getAllByRole("row")).toHaveLength(2);
         expect(screen.getByRole("link", { name: "Cam Chen" })).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: /More filters/ }));
         await user.click(screen.getByRole("combobox", { name: "Filter by trade-in" }));
         await user.click(await screen.findByRole("option", { name: "Yes" }));
         expect(screen.getByText("No leads match the selected filters.")).toBeInTheDocument();
@@ -66,9 +68,55 @@ describe("UI-LEAD — filtering and CRUD component integration", () => {
 
     it("UI-LEAD-04: VW alias finds Volkswagen catalog selections", async () => {
         setup();
-        await userEvent.setup().type(screen.getByPlaceholderText("Any make"), "VW");
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("button", { name: /More filters/ }));
+        await user.type(screen.getByPlaceholderText("Any make"), "VW");
         expect(screen.getAllByRole("row")).toHaveLength(2);
         expect(screen.getByRole("link", { name: "Ada Chen" })).toBeInTheDocument();
+    });
+
+    it("keeps advanced filters active when collapsed and removes them individually", async () => {
+        setup();
+        const user = userEvent.setup();
+        const toggle = screen.getByRole("button", { name: /More filters/ });
+        expect(toggle).toHaveAttribute("aria-expanded", "false");
+        await user.click(toggle);
+        await user.type(screen.getByPlaceholderText("Any make"), "VW");
+        await user.click(toggle);
+        expect(toggle).toHaveAttribute("aria-expanded", "false");
+        expect(screen.getByRole("button", { name: "Remove Make: VW" })).toBeInTheDocument();
+        expect(screen.getAllByRole("row")).toHaveLength(2);
+        await user.click(screen.getByRole("button", { name: "Remove Make: VW" }));
+        expect(screen.getAllByRole("row")).toHaveLength(5);
+    });
+
+    it("paginates results and resets to the first page when filtering", async () => {
+        render(<LeadTable leads={Array.from({ length: 30 }, (_, index) => makeLead({ leadID: index + 1, firstName: `Customer${index + 1}` }))} />);
+        const user = userEvent.setup();
+        expect(screen.getByText("1–25 of 30 leads")).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Next" }));
+        expect(screen.getByText("26–30 of 30 leads")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Customer30 Chen" })).toBeInTheDocument();
+        await user.type(screen.getByRole("textbox", { name: "Search leads" }), "Customer1");
+        expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Customer1 Chen" })).toBeInTheDocument();
+    }, 10000);
+
+    it("combines follow-up and unreplied filters while excluding inactive follow-ups", async () => {
+        render(<LeadTable leads={[
+            makeLead({ leadID: 1, firstName: "Active" }),
+            makeLead({ leadID: 2, firstName: "Inactive", status: false }),
+            makeLead({ leadID: 3, firstName: "Other" }),
+        ]} followUpLeadIds={[1, 2]} unrepliedLeadIds={[1, 3]} />);
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("button", { name: /More filters/ }));
+        await user.click(screen.getByRole("checkbox", { name: "Follow-up due through today" }));
+        expect(screen.getByRole("link", { name: "Active Chen" })).toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Inactive Chen" })).not.toBeInTheDocument();
+        await user.click(screen.getByRole("checkbox", { name: "Unreplied customer contact" }));
+        expect(screen.getAllByRole("row")).toHaveLength(2);
+        await user.click(screen.getByRole("button", { name: "Clear Filters" }));
+        expect(screen.getAllByRole("row")).toHaveLength(4);
     });
 
     it("UI-LEAD-05: blank names prevent creation; a valid lead appears after successful save", async () => {

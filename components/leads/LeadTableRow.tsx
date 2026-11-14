@@ -3,6 +3,7 @@ import { SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
 import Link from "next/link";
+import { useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
 import { Lead } from "@/domain/objects/Lead";
@@ -25,6 +26,7 @@ export default function LeadTableRow({
     deleting,
     updatingStatus,
 }: LeadTableRowProps) {
+    const [expanded, setExpanded] = useState(false);
     const outcome = getLeadOutcome(lead);
     const formatDate = (date: Date | null | undefined): string => {
         if (!date) {
@@ -35,8 +37,8 @@ export default function LeadTableRow({
     };
 
     return (
-        <TableRow className="border-b hover:bg-gray-50">
-            <TableCell className="px-4 py-4">
+        <TableRow className="grid grid-cols-2 gap-x-3 border-b p-4 hover:bg-gray-50 md:table-row md:p-0">
+            <TableCell className="block min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3">
                 <div className="flex items-center gap-2">
                     <span
                         className={`h-3 w-3 rounded-full ${
@@ -66,7 +68,7 @@ export default function LeadTableRow({
                 </div>
             </TableCell>
 
-            <TableCell className="px-4 py-4 font-medium text-gray-900">
+            <TableCell className="block min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap font-medium text-gray-900 md:table-cell md:px-4 md:py-3">
                 <div className="flex items-center gap-2">
                     <Button variant="ghost"
                         onClick={() => onViewBrief(lead)}
@@ -81,9 +83,12 @@ export default function LeadTableRow({
                         {lead.getLeadName()}
                     </Link>
                 </div>
+                <Button type="button" variant="ghost" className="mt-1 min-h-10 px-0 text-blue-600 md:hidden" aria-expanded={expanded} aria-label={`${expanded ? "Hide details" : "More details"} for ${lead.getLeadName()}`} onClick={() => setExpanded(!expanded)}>
+                    {expanded ? "Hide details" : "More details"}
+                </Button>
             </TableCell>
 
-            <TableCell className="px-4 py-4">
+            <TableCell className="block min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3">
                 <div className="text-gray-900">
                     {lead.leadEmail || "N/A"}
                 </div>
@@ -92,27 +97,27 @@ export default function LeadTableRow({
                 </div>
             </TableCell>
 
-            <TableCell className="px-4 py-4">
+            <TableCell className="block min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3"><span className="block text-xs text-slate-500 md:hidden">Vehicle interest</span>
                 {lead.vehicleInterest?.getFullDescription() ?? "None"}
             </TableCell>
 
-            <TableCell className="px-4 py-4">
+            <TableCell className={`${expanded ? "block" : "hidden"} min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3`}><span className="block text-xs text-slate-500 md:hidden">Trade-in vehicle</span>
                 {lead.tradeInVehicle
                     ? lead.tradeInVehicle.getFullDescription()
                     : "No"}
             </TableCell>
 
-            <TableCell className="px-4 py-4">{normalizeLeadStage(lead.stage)}</TableCell>
+            <TableCell className="block min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3"><span className="block text-xs text-slate-500 md:hidden">Stage</span>{normalizeLeadStage(lead.stage)}</TableCell>
 
-            <TableCell className="px-4 py-4 font-semibold">
-                {Math.floor(lead.score)}
+            <TableCell className="block whitespace-normal px-0 py-2 font-semibold md:whitespace-nowrap md:table-cell md:px-4 md:py-3">
+                <span className="block text-xs font-normal text-slate-500 md:hidden">Score</span>{Math.floor(lead.score)}
             </TableCell>
 
-            <TableCell className="px-4 py-4">
-                {formatDate(lead.lastInteractionDate)}
+            <TableCell className={`${expanded ? "block" : "hidden"} min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3`}>
+                <span className="block text-xs text-slate-500 md:hidden">Last contact</span>{formatDate(lead.lastInteractionDate)}
             </TableCell>
 
-            <TableCell className="px-4 py-4">
+            <TableCell className={`${expanded ? "block" : "hidden"} min-w-0 break-words whitespace-normal px-0 py-2 md:whitespace-nowrap md:table-cell md:px-4 md:py-3`}>
                 <div className="flex items-center justify-center gap-4">
                     <Link
                         href={`/leads/${lead.leadID}`}
