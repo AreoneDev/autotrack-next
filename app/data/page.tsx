@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CustomerDataRepo, type RecoveryEntry } from "@/lib/data/CustomerDataRepo";
+import { CustomerRecoveryUnavailableError } from "@/lib/data/CustomerRecoveryUnavailableError";
 import { exportToCsv } from "@/lib/data/csv";
 import { supabase } from "@/lib/supabase/client";
 
@@ -27,10 +28,11 @@ export default function CustomerDataPage() {
         try {
             const result = await new CustomerDataRepo().listDeleted();
             if (current === generation.current) setEntries(result);
-        } catch {
+        } catch (error) {
             if (current === generation.current) {
                 setEntries([]);
-                setLoadError("Unable to load deleted customers. Please retry in a moment.");
+                setLoadError(error instanceof CustomerRecoveryUnavailableError ? error.message
+                    : "Unable to load deleted customers. Please retry in a moment.");
             }
         } finally {
             if (current === generation.current) setLoading(false);

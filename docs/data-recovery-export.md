@@ -21,6 +21,49 @@ rewriting existing customer rows. Historical migrations remain unchanged.
 
 ## Recovery
 
+### Diagnosing unavailable recovery storage
+
+A zero-row, anonymous GET against the configured project's recovery endpoint on
+2026-11-13 returned HTTP 404 / `PGRST205`, with
+`public.lead_recovery_snapshots` absent from the API schema cache. A zero-row GET
+against `leads` returned HTTP 401 / `42501` (the existing table correctly denied
+anonymous access). No customer rows were read or changed. This establishes that
+the recovery endpoint is unavailable, not whether the migration is missing or
+PostgREST's schema cache is stale. It does not establish the state of any other
+deployment or project.
+
+The client now distinguishes `PGRST205` from transient read failures and asks for
+administrator setup verification. It retains the original error as the exception
+cause without displaying database diagnostics. Other failures still offer retry;
+an unavailable table never becomes an empty recycle bin. This client change alone
+does not provision hosted recovery storage.
+
+Before changing a hosted database, an administrator should collect this evidence:
+
+1. Confirm that the deployment's `NEXT_PUBLIC_SUPABASE_URL` points to the intended
+   project, and inspect that project's migration history for
+   `20261107020000_lead_recovery_export.sql` and its ownership/security prerequisites.
+2. Run `supabase/verification/20261113_customer_recovery_preflight.sql` in that
+   project. It reads catalog metadata only. The four existence checks, RLS,
+   read-policy and authenticated SELECT checks must be true; authenticated write
+   and anonymous SELECT checks must be false. Null privilege results indicate a
+   missing table. These checks do not establish full policy/function equivalence;
+   verify the deployed definitions against the migration when history is unclear.
+3. If storage/functions are missing, apply the existing recovery migration through
+   the normal reviewed database deployment after its prerequisites. Do not create
+   a placeholder table, weaken RLS, grant anonymous access, or replay an already
+   applied migration blindly. If objects already exist, inspect API exposure and
+   refresh PostgREST's schema cache as described in
+   [Supabase's schema refresh guide](https://supabase.com/kb/troubleshooting/refresh-postgrest-schema).
+4. Repeat the zero-row API check. An authenticated query should return HTTP 200
+   with `[]`; the anonymous query should deny access rather than return `PGRST205`.
+   Refresh `/data` using an existing authorized session. Do not delete or restore
+   a real customer as a smoke test; exercise those flows only with synthetic data
+   in a disposable database.
+
+References: [PostgREST error codes](https://docs.postgrest.org/en/latest/references/errors.html)
+and [schema caching](https://docs.postgrest.org/en/stable/references/schema_cache.html).
+
 The delete transaction locks the owned lead and child rows, snapshots raw lead,
 tasks, notifications and both vehicle-link tables before deleting any child,
 then deletes children and lead. Invalid cross-account historical relationships

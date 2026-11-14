@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CustomerDataPage from "@/app/data/page";
 import { CustomerDataRepo } from "@/lib/data/CustomerDataRepo";
+import { CustomerRecoveryUnavailableError } from "@/lib/data/CustomerRecoveryUnavailableError";
 import { exportTables } from "@/lib/data/csv";
 
 jest.mock("@/lib/data/CustomerDataRepo");
@@ -50,6 +51,22 @@ it("shows a list failure and allows retry without claiming an empty bin", async 
     expect(screen.queryByText("No deleted customers to restore.")).not.toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Refresh deleted customers" }));
     expect(await screen.findByRole("button", { name: "Restore customer #7" })).toBeInTheDocument();
+});
+it("explains unavailable recovery setup and reloads after it becomes available", async () => {
+    list.mockRejectedValueOnce(new CustomerRecoveryUnavailableError({
+        code: "PGRST205", message: "private database diagnostic",
+    }));
+    render(<CustomerDataPage />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Ask an administrator to verify its database setup.");
+    expect(alert).not.toHaveTextContent("retry in a moment");
+    expect(alert).not.toHaveTextContent("private database diagnostic");
+    expect(screen.queryByText("No deleted customers to restore.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restore customer #7" })).not.toBeInTheDocument();
+    expect(restore).not.toHaveBeenCalled();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Refresh deleted customers" }));
+    expect(await screen.findByRole("button", { name: "Restore customer #7" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 it("does not create a partial CSV after an export failure", async () => {
     exportData.mockRejectedValue(new Error("No file was downloaded."));

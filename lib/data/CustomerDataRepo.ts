@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { exportTables, type DataExport } from "./csv";
+import { CustomerRecoveryUnavailableError } from "./CustomerRecoveryUnavailableError";
 
 export type RecoveryEntry = {
     recovery_id: string;
@@ -21,6 +22,7 @@ export class CustomerDataRepo {
                 .select("recovery_id,lead_id::text,deleted_at,snapshot")
                 .is("restored_at", null).order("deleted_at", { ascending: false }).order("recovery_id")
                 .range(offset, offset + pageSize - 1);
+            if (error?.code === "PGRST205") throw new CustomerRecoveryUnavailableError(error);
             if (error || !Array.isArray(data) || data.some(row => !row || typeof row.recovery_id !== "string"
                 || typeof row.lead_id !== "string" || !/^[1-9][0-9]*$/.test(row.lead_id)
                 || !Number.isFinite(Date.parse(row.deleted_at)) || !row.snapshot?.lead
